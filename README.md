@@ -1,6 +1,5 @@
 # Drift
-A Keyless Script Hub for Roblox. To check supported games, report bugs or make suggestions please join our discord!
-[Discord](https://dsc.gg/getdrift)
+A Keyless Script Hub for Roblox. To check supported games, report bugs or make suggestions please join our [discord](https://dsc.gg/getdrift)!
 
 > [!WARNING]
 > **Keyless** means there is no key-system but you will have to get a key that updates regularly from our discord server.
