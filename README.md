@@ -1,5 +1,5 @@
 > [!IMPORTANT]
-> AI was used and skidding was done throughout the making of this script-hub. Code might be messy!
+> AI was used and skidding was done throughout the making of this Script Hub. Code might be messy!
 <div align="center">
 <img src="./addons/logo.png" width="100" alt="Drift Logo">
 <h1>Drift</h1>
