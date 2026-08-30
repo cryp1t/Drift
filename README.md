@@ -1,7 +1,7 @@
 > [!IMPORTANT]
 > AI was used and skidding was done throughout the making of this Script Hub. Code might be messy!
 <div align="center">
-<img src="./addons/logo.png" width="100" alt="Drift Logo">
+<img src="./addons/Logo.png" width="100" alt="Drift Logo">
 <h1>Drift</h1>
 <p>
 A Reliable Open Source Script Hub for Roblox. To check supported games, report bugs or make suggestions please join our <a href="https://dsc.gg/getdrift">Discord</a>!
