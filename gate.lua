@@ -2,11 +2,11 @@ local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 local placeId = game.PlaceId
 local Games = {
-    [112490729816320] = "https://pastefy.app/u07ymoCm/raw", -- Spin a Soccer Card
-    [3956818381] = "https://pastefy.app/iXNnwrSR/raw", -- Ninja Legends
-    [107095834793267] = "https://pastefy.app/anuq7cHu/raw", -- Oil Empire
-    [97598239454123] = "https://pastefy.app/p8jXLcXK/raw", -- Grow a Garden 2
-    [13772394625] = "https://pastefy.app/68qyFNo0/raw", -- Blade Ball
+    [112490729816320] = "https://raw.githubusercontent.com/cryp1t/Drift/refs/heads/main/source/spinasoccercard.lua", -- Spin a Soccer Card
+    [3956818381] = "https://raw.githubusercontent.com/cryp1t/Drift/refs/heads/main/source/ninja-legends.lua", -- Ninja Legends
+    [107095834793267] = "https://raw.githubusercontent.com/cryp1t/Drift/refs/heads/main/source/oilempire.lua", -- Oil Empire
+    [97598239454123] = "https://raw.githubusercontent.com/cryp1t/Drift/refs/heads/main/source/growagarden2.lua", -- Grow a Garden 2
+    [13772394625] = "https://raw.githubusercontent.com/cryp1t/Drift/refs/heads/main/source/bladeball.lua", -- Blade Ball
 }
 local scriptUrl = Games[placeId]
 if scriptUrl then
