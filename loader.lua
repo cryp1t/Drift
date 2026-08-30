@@ -7,6 +7,7 @@ local Games = {
     [107095834793267] = "https://raw.githubusercontent.com/cryp1t/Drift/refs/heads/main/source/oilempire.lua", -- Oil Empire
     [97598239454123] = "https://raw.githubusercontent.com/cryp1t/Drift/refs/heads/main/source/growagarden2.lua", -- Grow a Garden 2
     [13772394625] = "https://raw.githubusercontent.com/cryp1t/Drift/refs/heads/main/source/bladeball.lua", -- Blade Ball
+    [102871156420149] = "https://raw.githubusercontent.com/cryp1t/Drift/refs/heads/main/source/thelostfront.lua", -- The Lost Front
 }
 local scriptUrl = Games[placeId]
 if scriptUrl then
