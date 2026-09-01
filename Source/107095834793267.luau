@@ -1054,8 +1054,7 @@ SaveManager:LoadAutoloadConfig()
 
 
 local __ContribSrc = game:HttpGet("https://raw.githubusercontent.com/cryp1t/Drift/refs/heads/main/Contributors.luau")
-local __ContribFunc = loadstring(__ContribSrc)
-local __Team, __GameContribs = __ContribFunc()
+local __Team, __GameContribs = loadstring(__ContribSrc)()
 
 local __DevBox = Tabs.Cont:AddLeftGroupbox("Team", "wrench")
 for __name, __role in pairs(__Team) do
