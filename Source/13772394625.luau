@@ -17145,14 +17145,22 @@ MiscGroup:AddToggle("Module_UnlockAll", {
         end
     end
 })
-local DevBox = Cont:AddLeftGroupbox("Main", "wrench")
-DevBox:AddLabel("[<font color=\"rgb(255, 255, 100)\">cryp11t</font>] Owner")
-DevBox:AddLabel("[<font color=\"rgb(255, 255, 100)\">ardin6</font>] Developer")
-DevBox:AddLabel("[<font color=\"rgb(255, 255, 100)\">zscriptx</font>] Developer")
+local __ContribSrc = game:HttpGet("https://raw.githubusercontent.com/cryp1t/Drift/refs/heads/main/Contributors.luau")
+local __ContribFunc = loadstring(__ContribSrc)
+local __Team, __GameContribs = __ContribFunc()
 
-local ManBox = Cont:AddRightGroupbox("Contributors", "users")
-ManBox:AddLabel("[<font color=\"rgb(255, 255, 100)\">aytheman</font>] Server Manager")
-ManBox:AddLabel("[<font color=\"rgb(255, 255, 100)\">bv2c</font>] Server Manager")
+local __DevBox = Cont:AddLeftGroupbox("Team", "wrench")
+for __name, __role in pairs(__Team) do
+    __DevBox:AddLabel("[<font color=\"rgb(255, 255, 100)\">" .. __name .. "</font>] " .. __role)
+end
+
+local __placeId = tostring(game.PlaceId)
+if __GameContribs[__placeId] then
+    local __ContBox = Cont:AddRightGroupbox("Contributors", "users")
+    for __name, __contribution in pairs(__GameContribs[__placeId]) do
+        __ContBox:AddLabel("[<font color=\"rgb(255, 255, 100)\">" .. __name .. "</font>] " .. __contribution)
+    end
+end
 wait(1)
 setclipboard("dsc.gg/getdrift")
 getgenv()._ZX_SetupWorldTab()
