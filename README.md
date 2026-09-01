@@ -11,7 +11,7 @@ A Reliable Open Source Script Hub for Roblox. To check supported games, report b
 ## Get the script
 
 ```lua
-loadstring(game:HttpGet("https://raw.githubusercontent.com/cryp1t/Drift/refs/heads/main/loader.lua", true))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/cryp1t/Drift/refs/heads/main/Loader.luau", true))()
 ```
 Check the files in the repository for source code.
 Feel free to modify files without giving credits, But please give us improved scripts if possible through our discord!
