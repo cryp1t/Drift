@@ -15,6 +15,3 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/cryp1t/Drift/refs/hea
 ```
 Check the files in the repository for source code.
 Feel free to modify files without giving credits, But please give us improved scripts if possible through our discord!
-<p align="center">
-Made by <strong>cryp11t</strong> & <strong>ardin6</strong>
-</p>
