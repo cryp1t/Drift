@@ -1,8 +1,21 @@
-local repo = "https://raw.githubusercontent.com/deividcomsono/Obsidian/main/"
-local Library = loadstring(game:HttpGet(repo .. "Library.lua"))()
+-- UI Setup
+local Repository = "https://raw.githubusercontent.com/deividcomsono/Obsidian/main/"
+local Library = loadstring(game:HttpGet(Repository .. "Library.lua"))()
 local ThemeManager = loadstring(game:HttpGet("https://pastefy.app/hOgTtQmZ/raw"))()
-local SaveManager = loadstring(game:HttpGet(repo .. "addons/SaveManager.lua"))()
+local SaveManager = loadstring(game:HttpGet(Repository .. "addons/SaveManager.lua"))()
+local Options = Library.Options
+local Toggles = Library.Toggles
 
+-- Services
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local VirtualUser = game:GetService("VirtualUser")
+local Workspace = game:GetService("Workspace")
+
+-- References
+local LocalPlayer = Players.LocalPlayer
+
+-- Window & Tabs
 local Window = Library:CreateWindow({
 	Title = "Drift",
 	Footer = "Ninja Legends",
@@ -10,36 +23,40 @@ local Window = Library:CreateWindow({
 	NotifySide = "Right",
 	ShowCustomCursor = true,
 	AutoShow = true,
-    SidebarCompacted = true,
-    DisableSearch = true,
-    Animations = { TabSwitch = true },
-    TabTransitionTime = 0.65,
+	SidebarCompacted = true,
+	DisableSearch = true,
+	Animations = { TabSwitch = true },
+	TabTransitionTime = 0.65,
 })
 
 local Tabs = {
 	Main = Window:AddTab("Main", "swords", "Useful features to farm faster!"),
 	Teleports = Window:AddTab("Teleports", "map", "Teleport to certain locations"),
 	["UI Settings"] = Window:AddTab("UI Settings", "settings", "Customize the User Interface"),
-    Cont = Window:AddTab("Credits", "info", "People who helped us throughout this project!"),
+	Credits = Window:AddTab("Credits", "info", "People who helped us throughout this project!"),
 }
+
 Tabs.Main:UpdateWarningBox({
-    Title = "Welcome",
-    Text = "Hello! Thanks for choosing Drift, Your #1 choice for a keyless experience!",
-    IsNormal = true,
-    Visible = true,
-    LockSize = true,
+	Title = "Welcome",
+	Text = "Hello! Thanks for choosing Drift, Your #1 choice for a keyless experience!",
+	IsNormal = true,
+	Visible = true,
+	LockSize = true,
 })
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-local MarketplaceService = game:GetService("MarketplaceService")
+
+-- Farm Group
 local FarmGroup = Tabs.Main:AddLeftGroupbox("Auto Farm", "boxes")
 local BuyGroup = Tabs.Main:AddRightGroupbox("Auto Buy", "shopping-cart")
 local PetGroup = Tabs.Main:AddLeftGroupbox("Pet Management", "dog")
 local SellPetGroup = Tabs.Main:AddRightGroupbox("Pet Selling", "banknote")
 local MiscGroup = Tabs.Main:AddRightGroupbox("Misc", "wrench")
+
+-- Teleport Groups
 local IslandGroup = Tabs.Teleports:AddLeftGroupbox("Islands", "map-pin")
 local UtilityGroup = Tabs.Teleports:AddRightGroupbox("Utilities", "box")
 local AreaGroup = Tabs.Teleports:AddLeftGroupbox("Training Areas", "crosshair")
+
+-- Farm Toggles
 FarmGroup:AddToggle("GK", { Text = "Auto-Good Karma", Tooltip = "Auto-farm good karma" })
 FarmGroup:AddToggle("BK", { Text = "Auto-Bad Karma", Tooltip = "Auto-farm bad karma" })
 FarmGroup:AddDivider()
@@ -55,21 +72,28 @@ FarmGroup:AddToggle("SBoss", { Text = "Auto-Santa Boss", Tooltip = "Auto-farm Sa
 FarmGroup:AddToggle("AllBosses", { Text = "Auto-All Bosses", Tooltip = "Auto-farm all available bosses" })
 FarmGroup:AddDivider()
 FarmGroup:AddToggle("L", { Text = "Auto-Pet Levels", Tooltip = "Auto-level your pets by touching hoops" })
+
+-- Buy Toggles
 BuyGroup:AddToggle("Rank", { Text = "Auto-Rank", Tooltip = "Auto-buy ranks" })
 BuyGroup:AddToggle("Sword", { Text = "Auto-Sword", Tooltip = "Auto-buy swords" })
 BuyGroup:AddToggle("Belt", { Text = "Auto-Belt", Tooltip = "Auto-buy belts" })
 BuyGroup:AddToggle("Skill", { Text = "Auto-Skills", Tooltip = "Auto-buy skills" })
 BuyGroup:AddToggle("Shurikens", { Text = "Auto-Shurikens", Tooltip = "Auto-buy shurikens" })
-local Crystals = {}
-for i,v in next, game.workspace.mapCrystalsFolder:GetChildren() do 
-    if v then table.insert(Crystals, v.Name) end
+
+-- Crystal Options
+local CrystalNames = {}
+for _, Crystal in Workspace.mapCrystalsFolder:QueryDescendants("> Instance") do
+	table.insert(CrystalNames, Crystal.Name)
 end
+
 PetGroup:AddDropdown("Crystal", {
-    Text = "Crystals",
-    Values = Crystals,
-    Default = Crystals[1],
-    Tooltip = "Select which crystal to open"
+	Text = "Crystals",
+	Values = CrystalNames,
+	Default = CrystalNames[1],
+	Tooltip = "Select which crystal to open",
 })
+
+-- Pet Toggles
 PetGroup:AddToggle("TEgg", { Text = "Open Crystal", Tooltip = "Start opening the selected crystal" })
 PetGroup:AddDivider()
 PetGroup:AddToggle("Evolve", { Text = "Auto-Evolve", Tooltip = "Automatically evolve your pets" })
@@ -77,6 +101,8 @@ PetGroup:AddToggle("Eternalise", { Text = "Auto-Eternalise", Tooltip = "Automati
 PetGroup:AddToggle("Immortalize", { Text = "Auto-Immortalize", Tooltip = "Automatically immortalize your pets" })
 PetGroup:AddToggle("Legend", { Text = "Auto-Legend", Tooltip = "Automatically legendize your pets" })
 PetGroup:AddToggle("Elemental", { Text = "Auto-Elementalize", Tooltip = "Automatically elementalize your pets" })
+
+-- Sell Pet Toggles
 SellPetGroup:AddToggle("SBasic", { Text = "Sell All Basic", Tooltip = "Sell all basic pets" })
 SellPetGroup:AddToggle("SAdvanced", { Text = "Sell All Advanced", Tooltip = "Sell all advanced pets" })
 SellPetGroup:AddToggle("SRare", { Text = "Sell All Rare", Tooltip = "Sell all rare pets" })
@@ -91,331 +117,677 @@ SellPetGroup:AddToggle("S2", { Text = "Winter Legends Polar Bear", Tooltip = "Se
 SellPetGroup:AddToggle("S3", { Text = "Christmas Sensei Reindeer", Tooltip = "Sell specific pet" })
 SellPetGroup:AddToggle("S4", { Text = "Dark Blizzard Master Penguin", Tooltip = "Sell specific pet" })
 SellPetGroup:AddToggle("S5", { Text = "Cybernetic Sleigh Rider", Tooltip = "Sell specific pet" })
+
+-- Misc Toggles
 MiscGroup:AddToggle("Fast", { Text = "Fast Shuriken", Tooltip = "Increase shuriken speed" })
 MiscGroup:AddToggle("Slow", { Text = "Slow Shuriken", Tooltip = "Decrease shuriken speed" })
 MiscGroup:AddToggle("Invis", { Text = "Invisibility", Tooltip = "Make yourself invisible" })
 MiscGroup:AddDivider()
-MiscGroup:AddButton({
-    Text = "Collect All Chest",
-    Func = function()
-        local h = game.Players.LocalPlayer.Character.HumanoidRootPart
-        local chests = {"mythicalChest", "goldenChest", "enchantedChest", "magmaChest", "legendsChest", "eternalChest", "saharaChest", "thunderChest", "ancientChest", "midnightShadowChest", "groupRewardsCircle", "Daily Chest", "wonderChest"}
-        for _, cName in ipairs(chests) do
-            if workspace:FindFirstChild(cName) then
-                workspace[cName].circleInner.CFrame = h.CFrame
-                wait(3.5)
-            end
-        end
-        local p = workspace.Part.CFrame
-        local reset = {"ancientChest", "midnightShadowChest", "thunderChest", "saharaChest", "eternalChest", "legendsChest", "magmaChest", "enchantedChest", "goldenChest", "mythicalChest", "groupRewardsCircle", "Daily Chest"}
-        for _, rName in ipairs(reset) do if workspace:FindFirstChild(rName) then workspace[rName].circleInner.CFrame = p end end
-    end
-})
-MiscGroup:AddButton({ Text = "Collect Light Chest", Func = function() workspace.lightKarmaChest.circleInner.CFrame = game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame; wait(5); workspace.lightKarmaChest.circleInner.CFrame = workspace.Part.CFrame end })
-MiscGroup:AddButton({ Text = "Collect Evil Chest", Func = function() workspace.evilKarmaChest.circleInner.CFrame = game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame; wait(5); workspace.evilKarmaChest.circleInner.CFrame = workspace.Part.CFrame end })
-MiscGroup:AddButton({ Text = "Max Jumps", Func = function() task.spawn(function() while task.wait(.0001) do game.Players.LocalPlayer.multiJumpCount.Value = "50" end end) end })
-MiscGroup:AddButton({ Text = "Hide Name", Func = function() local n = game.Players.LocalPlayer.Name; workspace[n].Head.nameGui:Destroy() end })
-MiscGroup:AddLabel("Popups"):AddKeyPicker("pop", { Default = "None", SyncToggleState = false, Mode = "Toggle", Text = "Toggle Popups", Callback = function() game.Players.LocalPlayer.PlayerGui.statEffectsGui.Enabled = not game.Players.LocalPlayer.PlayerGui.statEffectsGui.Enabled; game.Players.LocalPlayer.PlayerGui.hoopGui.Enabled = not game.Players.LocalPlayer.PlayerGui.hoopGui.Enabled end })
-local Islands = {}
-for i,v in next, game.workspace.islandUnlockParts:GetChildren() do 
-    if v then table.insert(Islands, v.Name) end
-end
-IslandGroup:AddDropdown("IslandTP", {
-    Text = "Teleports",
-    Values = Islands,
-    Default = Islands[1],
-    Tooltip = "Select an island to teleport to",
-    Callback = function(Value)
-        if game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-            game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = game.Workspace.islandUnlockParts[Value].islandSignPart.CFrame
-        end
-    end
-})
-IslandGroup:AddToggle("UnlockAll", {
-    Text = "Unlock All",
-    Tooltip = "Teleports to all islands one by one to unlock them",
-    Default = false
-})
-UtilityGroup:AddButton({ Text = "Shop", Func = function() game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = game:GetService("Workspace").shopAreaCircles["shopAreaCircle11"].circleInner.CFrame end })
-UtilityGroup:AddButton({ Text = "Skills Shop", Func = function() game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = game:GetService("Workspace").skillAreaCircles["skillsAreaCircle11"].circleInner.CFrame end })
-UtilityGroup:AddButton({ Text = "Light Skills Shop", Func = function() game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(-116.49514, 3.24800324, 0.0838552266) end })
-UtilityGroup:AddButton({ Text = "Dark Skills Shop", Func = function() game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(-116.549767, 3.24800324, 58.087841) end })
-UtilityGroup:AddButton({ Text = "KOTH", Func = function() game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = game:GetService("Workspace").kingOfTheHillPart.CFrame end })
 
-AreaGroup:AddButton({ Text = "Mystical Waters (Good)", Func = function() game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(347.74881, 8824.53809, 114.271019) end })
-AreaGroup:AddButton({ Text = "Sword of Legends (Good)", Func = function() game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(1834.15967, 38.704483, -141.375641) end })
-AreaGroup:AddButton({ Text = "Elemental Tornado (Good)", Func = function() game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(299.758484, 30383.0957, -90.1542206) end })
-AreaGroup:AddButton({ Text = "Lava Pit (Bad)", Func = function() game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(-116.631485, 12952.5381, 271.14624) end })
-AreaGroup:AddButton({ Text = "Tornado (Bad)", Func = function() game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(325.641174, 16872.0938, -9.9906435) end })
-AreaGroup:AddButton({ Text = "Swords Of Ancients (Bad)", Func = function() game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(648.365662, 38.704483, 2409.72266) end })
+-- Misc Buttons
+MiscGroup:AddButton({
+	Text = "Collect All Chest",
+	Func = function()
+		local HumanoidRootPart = LocalPlayer.Character.HumanoidRootPart
+		local ChestNames = {
+			"mythicalChest", "goldenChest", "enchantedChest", "magmaChest",
+			"legendsChest", "eternalChest", "saharaChest", "thunderChest",
+			"ancientChest", "midnightShadowChest", "groupRewardsCircle",
+			"Daily Chest", "wonderChest",
+		}
+
+		for _, ChestName in ChestNames do
+			if Workspace:FindFirstChild(ChestName) then
+				Workspace[ChestName].circleInner.CFrame = HumanoidRootPart.CFrame
+				task.wait(3.5)
+			end
+		end
+
+		local ResetCFrame = Workspace.Part.CFrame
+		local ResetChestNames = {
+			"ancientChest", "midnightShadowChest", "thunderChest", "saharaChest",
+			"eternalChest", "legendsChest", "magmaChest", "enchantedChest",
+			"goldenChest", "mythicalChest", "groupRewardsCircle", "Daily Chest",
+		}
+
+		for _, ResetChestName in ResetChestNames do
+			if Workspace:FindFirstChild(ResetChestName) then
+				Workspace[ResetChestName].circleInner.CFrame = ResetCFrame
+			end
+		end
+	end,
+})
+
+MiscGroup:AddButton({
+	Text = "Collect Light Chest",
+	Func = function()
+		Workspace.lightKarmaChest.circleInner.CFrame = LocalPlayer.Character.HumanoidRootPart.CFrame
+		task.wait(5)
+		Workspace.lightKarmaChest.circleInner.CFrame = Workspace.Part.CFrame
+	end,
+})
+
+MiscGroup:AddButton({
+	Text = "Collect Evil Chest",
+	Func = function()
+		Workspace.evilKarmaChest.circleInner.CFrame = LocalPlayer.Character.HumanoidRootPart.CFrame
+		task.wait(5)
+		Workspace.evilKarmaChest.circleInner.CFrame = Workspace.Part.CFrame
+	end,
+})
+
+MiscGroup:AddButton({
+	Text = "Max Jumps",
+	Func = function()
+		task.spawn(function()
+			while task.wait(0.0001) do
+				LocalPlayer.multiJumpCount.Value = "50"
+			end
+		end)
+	end,
+})
+
+MiscGroup:AddButton({
+	Text = "Hide Name",
+	Func = function()
+		local PlayerName = LocalPlayer.Name
+		Workspace[PlayerName].Head.nameGui:Destroy()
+	end,
+})
+
+MiscGroup:AddLabel("Popups"):AddKeyPicker("pop", {
+	Default = "None",
+	SyncToggleState = false,
+	Mode = "Toggle",
+	Text = "Toggle Popups",
+	Callback = function()
+		LocalPlayer.PlayerGui.statEffectsGui.Enabled = not LocalPlayer.PlayerGui.statEffectsGui.Enabled
+		LocalPlayer.PlayerGui.hoopGui.Enabled = not LocalPlayer.PlayerGui.hoopGui.Enabled
+	end,
+})
+
+-- Island Teleports
+local IslandNames = {}
+for _, Island in Workspace.islandUnlockParts:QueryDescendants("> Instance") do
+	table.insert(IslandNames, Island.Name)
+end
+
+IslandGroup:AddDropdown("IslandTP", {
+	Text = "Teleports",
+	Values = IslandNames,
+	Default = IslandNames[1],
+	Tooltip = "Select an island to teleport to",
+	Callback = function(Value)
+		if LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+			LocalPlayer.Character.HumanoidRootPart.CFrame = Workspace.islandUnlockParts[Value].islandSignPart.CFrame
+		end
+	end,
+})
+
+IslandGroup:AddToggle("UnlockAll", {
+	Text = "Unlock All",
+	Tooltip = "Teleports to all islands one by one to unlock them",
+	Default = false,
+})
+
+-- Utility Buttons
+UtilityGroup:AddButton({
+	Text = "Shop",
+	Func = function()
+		LocalPlayer.Character.HumanoidRootPart.CFrame = Workspace.shopAreaCircles["shopAreaCircle11"].circleInner.CFrame
+	end,
+})
+
+UtilityGroup:AddButton({
+	Text = "Skills Shop",
+	Func = function()
+		LocalPlayer.Character.HumanoidRootPart.CFrame = Workspace.skillAreaCircles["skillsAreaCircle11"].circleInner.CFrame
+	end,
+})
+
+UtilityGroup:AddButton({
+	Text = "Light Skills Shop",
+	Func = function()
+		LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(-116.49514, 3.24800324, 0.0838552266)
+	end,
+})
+
+UtilityGroup:AddButton({
+	Text = "Dark Skills Shop",
+	Func = function()
+		LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(-116.549767, 3.24800324, 58.087841)
+	end,
+})
+
+UtilityGroup:AddButton({
+	Text = "KOTH",
+	Func = function()
+		LocalPlayer.Character.HumanoidRootPart.CFrame = Workspace.kingOfTheHillPart.CFrame
+	end,
+})
+
+-- Area Buttons
+AreaGroup:AddButton({
+	Text = "Mystical Waters (Good)",
+	Func = function()
+		LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(347.74881, 8824.53809, 114.271019)
+	end,
+})
+
+AreaGroup:AddButton({
+	Text = "Sword of Legends (Good)",
+	Func = function()
+		LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(1834.15967, 38.704483, -141.375641)
+	end,
+})
+
+AreaGroup:AddButton({
+	Text = "Elemental Tornado (Good)",
+	Func = function()
+		LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(299.758484, 30383.0957, -90.1542206)
+	end,
+})
+
+AreaGroup:AddButton({
+	Text = "Lava Pit (Bad)",
+	Func = function()
+		LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(-116.631485, 12952.5381, 271.14624)
+	end,
+})
+
+AreaGroup:AddButton({
+	Text = "Tornado (Bad)",
+	Func = function()
+		LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(325.641174, 16872.0938, -9.9906435)
+	end,
+})
+
+AreaGroup:AddButton({
+	Text = "Swords Of Ancients (Bad)",
+	Func = function()
+		LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(648.365662, 38.704483, 2409.72266)
+	end,
+})
+
+-- UI Settings Group
 local MenuGroup = Tabs["UI Settings"]:AddLeftGroupbox("Menu", "settings")
-MenuGroup:AddLabel("Menu bind"):AddKeyPicker("MenuKeybind", { Default = "RightShift", NoUI = true, Text = "Menu keybind" })
+
+MenuGroup:AddLabel("Menu bind"):AddKeyPicker("MenuKeybind", {
+	Default = "RightShift",
+	NoUI = true,
+	Text = "Menu keybind",
+})
+
 MenuGroup:AddToggle("ShowCustomCursor", {
 	Text = "Custom Cursor",
 	Tooltip = "toggle mouse",
 	Default = true,
-	Callback = function(v)
-		Library.ShowCustomCursor = v
+	Callback = function(Value)
+		Library.ShowCustomCursor = Value
 	end,
 })
+
 MenuGroup:AddDropdown("NotificationSide", {
 	Values = { "Left", "Right" },
 	Default = "Right",
 	Tooltip = "popup side",
 	Text = "Notification Side",
-	Callback = function(v)
-		Library:SetNotifySide(v)
+	Callback = function(Value)
+		Library:SetNotifySide(Value)
 	end,
 })
-MenuGroup:AddToggle("KeybindMenuOpen", { Default = Library.KeybindFrame.Visible, Text = "Open Keybind Menu", Callback = function(v) Library.KeybindFrame.Visible = v end })
+
+MenuGroup:AddToggle("KeybindMenuOpen", {
+	Default = Library.KeybindFrame.Visible,
+	Text = "Open Keybind Menu",
+	Callback = function(Value)
+		Library.KeybindFrame.Visible = Value
+	end,
+})
+
 MenuGroup:AddDivider()
 MenuGroup:AddButton("Unload", function() Library:Unload() end)
-Library.ToggleKeybind = Library.Options.MenuKeybind
-local Toggles = Library.Toggles
-local Options = Library.Options
-task.spawn(function() while task.wait(0.4) do if Toggles.GK.Value then loadstring(game:HttpGet(('https://pastebin.com/raw/AaqHqPyw'),true))() end end end)
-task.spawn(function() while task.wait(0.4) do if Toggles.BK.Value then loadstring(game:HttpGet(('https://pastebin.com/raw/wEEB3nQt'),true))() end end end)
-task.spawn(function()
-    while task.wait() do
-        if Toggles.Swing.Value then
-            if game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                if game.Players.LocalPlayer.Character:FindFirstChildOfClass("Tool") then 
-                    game.Players.LocalPlayer.ninjaEvent:FireServer("swingKatana")
-                else
-                    for i,v in pairs(game.Players.LocalPlayer.Backpack:GetChildren()) do 
-                        if v.ClassName == "Tool" and v:FindFirstChild("attackShurikenScript") then 
-                            game.Players.LocalPlayer.Character.Humanoid:EquipTool(v)
-                            wait()
-                            if v.ClassName == "Tool" and v:FindFirstChild("attackKatanaScript") then 
-                                game.Players.LocalPlayer.Character.Humanoid:EquipTool(v)                            
-                            end
-                        end
-                    end
-                end
-            end
-        end
-    end
-end)
-task.spawn(function()
-    while task.wait(0.01) do
-        if Toggles.Sell.Value then
-            if game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                game.workspace.sellAreaCircles["sellAreaCircle7"].circleInner.CFrame = game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame
-                wait(.1)
-                game.workspace.sellAreaCircles["sellAreaCircle7"].circleInner.CFrame = game.Workspace.Part.CFrame
-            end
-        end
-    end
-end)
-task.spawn(function()
-    while task.wait(0.01) do
-        if Toggles.FullSell.Value then 
-            if game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                if game.Players.LocalPlayer.PlayerGui.gameGui.maxNinjitsuMenu.Visible == true then
-                    game.workspace.sellAreaCircles["sellAreaCircle7"].circleInner.CFrame = game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame
-                    wait(.05)
-                    game.workspace.sellAreaCircles["sellAreaCircle7"].circleInner.CFrame = game.Workspace.Part.CFrame
-                end
-            end
-        end
-    end
-end)
-task.spawn(function()
-    while task.wait(0.1) do 
-        if game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-            if Toggles.Chi.Value then
-                for i,v in pairs(game.Workspace.spawnedCoins.Valley:GetChildren()) do
-                    if v.Name == "Blue Chi Crate" then 
-                        game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(v.Position)
-                        wait(.16)
-                    end
-                end
-            end
-        end
-    end
-end)
-task.spawn(function()
-    while task.wait(0.1) do
-        if Toggles.L.Value then
-            local plr = game.Players.LocalPlayer
-            for _,v in pairs(workspace.Hoops:GetDescendants()) do
-                if v.ClassName == "MeshPart" then
-                    v.touchPart.CFrame = plr.Character.HumanoidRootPart.CFrame
-                end
-            end
-        end
-    end
-end)
-local function bossFarm(toggle, bossName)
-    task.spawn(function()
-        while task.wait(0.1) do
-            if Toggles[toggle].Value then
-                local bPart = game:GetService("Workspace").bossFolder:FindFirstChild(bossName) and game:GetService("Workspace").bossFolder[bossName]:FindFirstChild("HumanoidRootPart")
-                if game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and bPart then
-                    game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = bPart.CFrame
-                    if game.Players.LocalPlayer.Character:FindFirstChildOfClass("Tool") then
-                        game.Players.LocalPlayer.Character:FindFirstChildOfClass("Tool"):Activate()
-                    else
-                        for i,v in pairs(game.Players.LocalPlayer.Backpack:GetChildren()) do
-                            if v.ClassName == "Tool" and v:FindFirstChild("attackKatanaScript") then
-                                v.attackTime.Value = 0.2
-                                game.Players.LocalPlayer.Character.Humanoid:EquipTool(v)
-                            end
-                        end
-                    end
-                end
-            end
-        end
-    end)
-end
-bossFarm("Boss", "RobotBoss")
-bossFarm("EBoss", "EternalBoss")
-bossFarm("ABoss", "AncientMagmaBoss")
-bossFarm("SBoss", "Samurai Santa")
-task.spawn(function()
-    while task.wait(0.1) do
-        if Toggles.AllBosses.Value then
-            local h = game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-            if h then
-                local b = game.Workspace.bossFolder
-                local target = b:FindFirstChild("Samurai Santa") or b:FindFirstChild("AncientMagmaBoss") or b:FindFirstChild("EternalBoss") or b:FindFirstChild("RobotBoss")
-                if target and target:FindFirstChild("HumanoidRootPart") then
-                    h.CFrame = target.HumanoidRootPart.CFrame
-                    if game.Players.LocalPlayer.Character:FindFirstChildOfClass("Tool") then
-                        game.Players.LocalPlayer.Character:FindFirstChildOfClass("Tool"):Activate()
-                    else
-                        for i,v in pairs(game.Players.LocalPlayer.Backpack:GetChildren()) do
-                            if v.ClassName == "Tool" and v:FindFirstChild("attackKatanaScript") then
-                                v.attackTime.Value = 0.2
-                                game.Players.LocalPlayer.Character.Humanoid:EquipTool(v)
-                            end
-                        end
-                    end
-                end
-            end
-        end
-    end
-end)
-local function buyTask(toggle, eventName)
-    task.spawn(function()
-        while task.wait(0.5) do
-            if Toggles[toggle].Value then
-                local locs = {"Ground", "Astral Island", "Space Island","Tundra Island", "Eternal Island", "Sandstorm", "Thunderstorm", "Ancient Inferno Island", "Midnight Shadow Island", "Mythical Souls Island", "Winter Wonder Island"}
-                for i = 1, #locs do game:GetService("Players").LocalPlayer.ninjaEvent:FireServer(eventName, locs[i]) end
-            end
-        end
-    end)
-end
-buyTask("Sword", "buyAllSwords")
-buyTask("Belt", "buyAllBelts")
-buyTask("Skill", "buyAllSkills")
-buyTask("Shurikens", "buyAllShurikens")
-task.spawn(function() while task.wait(0.5) do if Toggles.Rank.Value then local ranks = game:GetService("ReplicatedStorage").Ranks.Ground:GetChildren(); for i = 1, #ranks do game:GetService("Players").LocalPlayer.ninjaEvent:FireServer("buyRank", ranks[i].Name) end end end end)
-task.spawn(function() while task.wait(0.01) do if Toggles.TEgg.Value then game:GetService("ReplicatedStorage").rEvents.openCrystalRemote:InvokeServer("openCrystal", Options.Crystal.Value) end end end)
-local function petOption(toggle, eventName)
-    task.spawn(function()
-        while task.wait(3) do
-            if Toggles[toggle].Value then
-                for i,v in pairs(game:GetService("Players").LocalPlayer.petsFolder:GetChildren()) do
-                    for _,x in pairs(v:GetChildren()) do game:GetService("ReplicatedStorage").rEvents[eventName]:FireServer(eventName:gsub("Event", ""), x.Name) end
-                end
-            end
-        end
-    end)
-end
-petOption("Evolve", "petEvolveEvent")
-petOption("Eternalise", "petEternalizeEvent")
-petOption("Immortalize", "petImmortalizeEvent")
-petOption("Legend", "petLegendEvent")
-petOption("Elemental", "petLegendEvent")
-local function sellTask(toggle, folderName)
-    task.spawn(function()
-        while task.wait(1) do
-            if Toggles[toggle].Value then
-                for i,v in pairs(game.Players.LocalPlayer.petsFolder[folderName]:GetChildren()) do
-                    game.ReplicatedStorage.rEvents.sellPetEvent:FireServer("sellPet", v)
-                end
-            end
-        end
-    end)
-end
-local sellMaps = {SBasic = "Basic", SAdvanced = "Advanced", SRare = "Rare", SEpic = "Epic", SUnique = "Unique", SOmega = "Omega", SElite = "Elite", SInfinity = "Infinity"}
-for t, f in pairs(sellMaps) do sellTask(t, f) end
-local function specialSell(toggle, petName)
-    task.spawn(function()
-        while task.wait(1) do
-            if Toggles[toggle].Value then
-                for i,v in pairs(game.Players.LocalPlayer.petsFolder.Infinity:GetChildren()) do
-                    if v.Name == petName then game.ReplicatedStorage.rEvents.sellPetEvent:FireServer("sellPet", v) end
-                end
-            end
-        end
-    end)
-end
-specialSell("S1", "Winter Wonder Kitty")
-specialSell("S2", "Winter Legends Polar Bear")
-specialSell("S3", "Christmas Sensei Reindeer")
-specialSell("S4", "Dark Blizzard Master Penguin")
-specialSell("S5", "Cybernetic Sleigh Rider")
-task.spawn(function() while task.wait(0.001) do if Toggles.Invis.Value then game.Players.LocalPlayer.ninjaEvent:FireServer("goInvisible") end end end)
-local function shurikenSpeed(toggle, velocity)
-    task.spawn(function()
-        while task.wait(0.001) do
-            if Toggles[toggle].Value then
-                local Mouse = game.Players.LocalPlayer:GetMouse()
-                for _,p in pairs(game.Workspace.shurikensFolder:GetChildren()) do
-                    if p.Name == "Handle" and p:FindFirstChildOfClass("BodyVelocity") then
-                        local bv = p:FindFirstChildOfClass("BodyVelocity")
-                        bv.MaxForce = Vector3.new(math.huge,math.huge,math.huge)
-                        bv.Velocity = Mouse.Hit.lookVector * velocity
-                    end
-                end
-            end
-        end
-    end)
-end
-shurikenSpeed("Fast", 1000)
-shurikenSpeed("Slow", 35)
-local vu = game:GetService("VirtualUser")
-game:GetService("Players").LocalPlayer.Idled:connect(function() vu:Button2Down(Vector2.new(0, 0), workspace.CurrentCamera.CFrame); wait(1); vu:Button2Up(Vector2.new(0, 0), workspace.CurrentCamera.CFrame) end)
-task.spawn(function()
-    while task.wait(0.6) do
-        if Toggles.UnlockAll.Value then
-            for i,v in next, game.workspace.islandUnlockParts:GetChildren() do 
-                if not Toggles.UnlockAll.Value then break end
-                if v and v:FindFirstChild("islandSignPart") then 
-                    game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = v.islandSignPart.CFrame; 
-                    wait(0.5)
-                end
-            end
-            Toggles.UnlockAll:SetValue(false)
-        end
-    end
-end)
-ThemeManager:SetLibrary(Library); SaveManager:SetLibrary(Library); SaveManager:IgnoreThemeSettings(); SaveManager:SetIgnoreIndexes({ "MenuKeybind" }); ThemeManager:SetFolder("Drift"); SaveManager:SetFolder("Drift/NinjaLegends"); SaveManager:BuildConfigSection(Tabs["UI Settings"]); ThemeManager:ApplyToTab(Tabs["UI Settings"]); SaveManager:LoadAutoloadConfig()
 
-local __ContribSrc = game:HttpGet("https://raw.githubusercontent.com/cryp1t/Drift/refs/heads/main/Contributors.luau")
-local __Team, __GameContribs = loadstring(__ContribSrc)()
+Library.ToggleKeybind = Options.MenuKeybind
 
-local __DevBox = Tabs.Cont:AddLeftGroupbox("Team", "wrench")
-for __name, __role in pairs(__Team) do
-    __DevBox:AddLabel("[<font color=\"rgb(255, 255, 100)\">" .. __name .. "</font>] " .. __role)
+-- Auto Karma Farming
+task.spawn(function()
+	while task.wait(0.4) do
+		if Toggles.GK.Value then
+			loadstring(game:HttpGet("https://pastebin.com/raw/AaqHqPyw", true))()
+		end
+	end
+end)
+
+task.spawn(function()
+	while task.wait(0.4) do
+		if Toggles.BK.Value then
+			loadstring(game:HttpGet("https://pastebin.com/raw/wEEB3nQt", true))()
+		end
+	end
+end)
+
+-- Auto Swing
+task.spawn(function()
+	while task.wait() do
+		if not Toggles.Swing.Value then
+			continue
+		end
+
+		if not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+			continue
+		end
+
+		if LocalPlayer.Character:FindFirstChildOfClass("Tool") then
+			LocalPlayer.ninjaEvent:FireServer("swingKatana")
+		else
+			for _, Tool in LocalPlayer.Backpack:QueryDescendants("> Tool") do
+				if Tool:FindFirstChild("attackShurikenScript") then
+					LocalPlayer.Character.Humanoid:EquipTool(Tool)
+					task.wait()
+
+					if Tool:FindFirstChild("attackKatanaScript") then
+						LocalPlayer.Character.Humanoid:EquipTool(Tool)
+					end
+				end
+			end
+		end
+	end
+end)
+
+-- Auto Sell
+task.spawn(function()
+	while task.wait(0.01) do
+		if not Toggles.Sell.Value then
+			continue
+		end
+
+		if not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+			continue
+		end
+
+		Workspace.sellAreaCircles["sellAreaCircle7"].circleInner.CFrame = LocalPlayer.Character.HumanoidRootPart.CFrame
+		task.wait(0.1)
+		Workspace.sellAreaCircles["sellAreaCircle7"].circleInner.CFrame = Workspace.Part.CFrame
+	end
+end)
+
+-- Auto Full Sell
+task.spawn(function()
+	while task.wait(0.01) do
+		if not Toggles.FullSell.Value then
+			continue
+		end
+
+		if not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+			continue
+		end
+
+		if LocalPlayer.PlayerGui.gameGui.maxNinjitsuMenu.Visible ~= true then
+			continue
+		end
+
+		Workspace.sellAreaCircles["sellAreaCircle7"].circleInner.CFrame = LocalPlayer.Character.HumanoidRootPart.CFrame
+		task.wait(0.05)
+		Workspace.sellAreaCircles["sellAreaCircle7"].circleInner.CFrame = Workspace.Part.CFrame
+	end
+end)
+
+-- Auto Chi
+task.spawn(function()
+	while task.wait(0.1) do
+		if not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+			continue
+		end
+
+		if not Toggles.Chi.Value then
+			continue
+		end
+
+		for _, Coin in Workspace.spawnedCoins.Valley:QueryDescendants("> Instance") do
+			if Coin.Name ~= "Blue Chi Crate" then
+				continue
+			end
+
+			LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(Coin.Position)
+			task.wait(0.16)
+		end
+	end
+end)
+
+-- Auto Pet Levels
+task.spawn(function()
+	while task.wait(0.1) do
+		if not Toggles.L.Value then
+			continue
+		end
+
+		for _, Hoop in Workspace.Hoops:QueryDescendants("MeshPart") do
+			Hoop.touchPart.CFrame = LocalPlayer.Character.HumanoidRootPart.CFrame
+		end
+	end
+end)
+
+-- Boss Farming
+local function FarmBoss(ToggleName, BossName)
+	task.spawn(function()
+		while task.wait(0.1) do
+			if not Toggles[ToggleName].Value then
+				continue
+			end
+
+			local BossPart = Workspace.bossFolder:FindFirstChild(BossName)
+				and Workspace.bossFolder[BossName]:FindFirstChild("HumanoidRootPart")
+
+			if not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+				continue
+			end
+
+			if not BossPart then
+				continue
+			end
+
+			LocalPlayer.Character.HumanoidRootPart.CFrame = BossPart.CFrame
+
+			if LocalPlayer.Character:FindFirstChildOfClass("Tool") then
+				LocalPlayer.Character:FindFirstChildOfClass("Tool"):Activate()
+			else
+				for _, Tool in LocalPlayer.Backpack:QueryDescendants("> Tool") do
+					if Tool:FindFirstChild("attackKatanaScript") then
+						Tool.attackTime.Value = 0.2
+						LocalPlayer.Character.Humanoid:EquipTool(Tool)
+					end
+				end
+			end
+		end
+	end)
 end
 
-local __placeId = tostring(game.PlaceId)
-if __GameContribs[__placeId] then
-    local __ContBox = Tabs.Cont:AddRightGroupbox("Contributors", "users")
-    for __name, __contribution in pairs(__GameContribs[__placeId]) do
-        __ContBox:AddLabel("[<font color=\"rgb(255, 255, 100)\">" .. __name .. "</font>] " .. __contribution)
-    end
+FarmBoss("Boss", "RobotBoss")
+FarmBoss("EBoss", "EternalBoss")
+FarmBoss("ABoss", "AncientMagmaBoss")
+FarmBoss("SBoss", "Samurai Santa")
+
+-- Auto All Bosses
+task.spawn(function()
+	while task.wait(0.1) do
+		if not Toggles.AllBosses.Value then
+			continue
+		end
+
+		local RootPart = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+		if not RootPart then
+			continue
+		end
+
+		local BossFolder = Workspace.bossFolder
+		local Target = BossFolder:FindFirstChild("Samurai Santa")
+			or BossFolder:FindFirstChild("AncientMagmaBoss")
+			or BossFolder:FindFirstChild("EternalBoss")
+			or BossFolder:FindFirstChild("RobotBoss")
+
+		if not Target or not Target:FindFirstChild("HumanoidRootPart") then
+			continue
+		end
+
+		RootPart.CFrame = Target.HumanoidRootPart.CFrame
+
+		if LocalPlayer.Character:FindFirstChildOfClass("Tool") then
+			LocalPlayer.Character:FindFirstChildOfClass("Tool"):Activate()
+		else
+			for _, Tool in LocalPlayer.Backpack:QueryDescendants("> Tool") do
+				if Tool:FindFirstChild("attackKatanaScript") then
+					Tool.attackTime.Value = 0.2
+					LocalPlayer.Character.Humanoid:EquipTool(Tool)
+				end
+			end
+		end
+	end
+end)
+
+-- Auto Purchasing
+local function PurchaseTask(ToggleName, EventName)
+	task.spawn(function()
+		while task.wait(0.5) do
+			if not Toggles[ToggleName].Value then
+				continue
+			end
+
+			local BuyLocations = {
+				"Ground", "Astral Island", "Space Island", "Tundra Island",
+				"Eternal Island", "Sandstorm", "Thunderstorm",
+				"Ancient Inferno Island", "Midnight Shadow Island",
+				"Mythical Souls Island", "Winter Wonder Island",
+			}
+
+			for _, Location in BuyLocations do
+				LocalPlayer.ninjaEvent:FireServer(EventName, Location)
+			end
+		end
+	end)
 end
-wait(1)
+
+PurchaseTask("Sword", "buyAllSwords")
+PurchaseTask("Belt", "buyAllBelts")
+PurchaseTask("Skill", "buyAllSkills")
+PurchaseTask("Shurikens", "buyAllShurikens")
+
+-- Auto Rank
+task.spawn(function()
+	while task.wait(0.5) do
+		if not Toggles.Rank.Value then
+			continue
+		end
+
+		local Ranks = ReplicatedStorage.Ranks.Ground:QueryDescendants("> Instance")
+
+		for _, Rank in Ranks do
+			LocalPlayer.ninjaEvent:FireServer("buyRank", Rank.Name)
+		end
+	end
+end)
+
+-- Auto Crystal Opening
+task.spawn(function()
+	while task.wait(0.01) do
+		if not Toggles.TEgg.Value then
+			continue
+		end
+
+		ReplicatedStorage.rEvents.openCrystalRemote:InvokeServer("openCrystal", Options.Crystal.Value)
+	end
+end)
+
+-- Pet Upgrading
+local function UpgradePets(ToggleName, EventName)
+	task.spawn(function()
+		while task.wait(3) do
+			if not Toggles[ToggleName].Value then
+				continue
+			end
+
+			for _, Pet in LocalPlayer.petsFolder:QueryDescendants("> Instance") do
+				for _, SubPet in Pet:QueryDescendants("> Instance") do
+					ReplicatedStorage.rEvents[EventName]:FireServer(EventName:gsub("Event", ""), SubPet.Name)
+				end
+			end
+		end
+	end)
+end
+
+UpgradePets("Evolve", "petEvolveEvent")
+UpgradePets("Eternalise", "petEternalizeEvent")
+UpgradePets("Immortalize", "petImmortalizeEvent")
+UpgradePets("Legend", "petLegendEvent")
+UpgradePets("Elemental", "petLegendEvent")
+
+-- Pet Selling
+local function SellPets(ToggleName, FolderName)
+	task.spawn(function()
+		while task.wait(1) do
+			if not Toggles[ToggleName].Value then
+				continue
+			end
+
+			for _, Pet in LocalPlayer.petsFolder[FolderName]:QueryDescendants("> Instance") do
+				ReplicatedStorage.rEvents.sellPetEvent:FireServer("sellPet", Pet)
+			end
+		end
+	end)
+end
+
+local SellFolderMap = {
+	SBasic = "Basic",
+	SAdvanced = "Advanced",
+	SRare = "Rare",
+	SEpic = "Epic",
+	SUnique = "Unique",
+	SOmega = "Omega",
+	SElite = "Elite",
+	SInfinity = "Infinity",
+}
+
+for ToggleName, FolderName in SellFolderMap do
+	SellPets(ToggleName, FolderName)
+end
+
+-- Specific Pet Selling
+local function SellSpecificPet(ToggleName, PetName)
+	task.spawn(function()
+		while task.wait(1) do
+			if not Toggles[ToggleName].Value then
+				continue
+			end
+
+			for _, Pet in LocalPlayer.petsFolder.Infinity:QueryDescendants("> Instance") do
+				if Pet.Name == PetName then
+					ReplicatedStorage.rEvents.sellPetEvent:FireServer("sellPet", Pet)
+				end
+			end
+		end
+	end)
+end
+
+SellSpecificPet("S1", "Winter Wonder Kitty")
+SellSpecificPet("S2", "Winter Legends Polar Bear")
+SellSpecificPet("S3", "Christmas Sensei Reindeer")
+SellSpecificPet("S4", "Dark Blizzard Master Penguin")
+SellSpecificPet("S5", "Cybernetic Sleigh Rider")
+
+-- Auto Invisibility
+task.spawn(function()
+	while task.wait(0.001) do
+		if not Toggles.Invis.Value then
+			continue
+		end
+
+		LocalPlayer.ninjaEvent:FireServer("goInvisible")
+	end
+end)
+
+-- Shuriken Speed
+local function SetShurikenSpeed(ToggleName, Velocity)
+	task.spawn(function()
+		while task.wait(0.001) do
+			if not Toggles[ToggleName].Value then
+				continue
+			end
+
+			local Mouse = LocalPlayer:GetMouse()
+
+			for _, Projectile in Workspace.shurikensFolder:QueryDescendants("> Instance") do
+				if Projectile.Name ~= "Handle" then
+					continue
+				end
+
+				if not Projectile:FindFirstChildOfClass("BodyVelocity") then
+					continue
+				end
+
+				local BodyVelocity = Projectile:FindFirstChildOfClass("BodyVelocity")
+				BodyVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+				BodyVelocity.Velocity = Mouse.Hit.lookVector * Velocity
+			end
+		end
+	end)
+end
+
+SetShurikenSpeed("Fast", 1000)
+SetShurikenSpeed("Slow", 35)
+
+-- Anti-AFK
+LocalPlayer.Idled:Connect(function()
+	VirtualUser:Button2Down(Vector2.new(0, 0), Workspace.CurrentCamera.CFrame)
+	task.wait(1)
+	VirtualUser:Button2Up(Vector2.new(0, 0), Workspace.CurrentCamera.CFrame)
+end)
+
+-- Auto Unlock All
+task.spawn(function()
+	while task.wait(0.6) do
+		if not Toggles.UnlockAll.Value then
+			continue
+		end
+
+		for _, Island in Workspace.islandUnlockParts:QueryDescendants("> Instance") do
+			if not Toggles.UnlockAll.Value then
+				break
+			end
+
+			if not Island:FindFirstChild("islandSignPart") then
+				continue
+			end
+
+			LocalPlayer.Character.HumanoidRootPart.CFrame = Island.islandSignPart.CFrame
+			task.wait(0.5)
+		end
+
+		Toggles.UnlockAll:SetValue(false)
+	end
+end)
+
+-- Theme & Save Manager
+ThemeManager:SetLibrary(Library)
+SaveManager:SetLibrary(Library)
+SaveManager:IgnoreThemeSettings()
+SaveManager:SetIgnoreIndexes({ "MenuKeybind" })
+ThemeManager:SetFolder("Drift")
+SaveManager:SetFolder("Drift/NinjaLegends")
+SaveManager:BuildConfigSection(Tabs["UI Settings"])
+ThemeManager:ApplyToTab(Tabs["UI Settings"])
+SaveManager:LoadAutoloadConfig()
+
+-- Credits Tab
+local ContributorsSource = game:HttpGet("https://raw.githubusercontent.com/cryp1t/Drift/refs/heads/main/Contributors.luau")
+local TeamMembers, GameContributors = loadstring(ContributorsSource)()
+
+local TeamGroup = Tabs.Credits:AddLeftGroupbox("Team", "wrench")
+
+for Name, Role in TeamMembers do
+	TeamGroup:AddLabel("[<font color=\"rgb(255, 255, 100)\">" .. Name .. "</font>] " .. Role)
+end
+
+local PlaceId = tostring(game.PlaceId)
+
+if GameContributors[PlaceId] then
+	local ContributorsGroup = Tabs.Credits:AddRightGroupbox("Contributors", "users")
+
+	for Name, Contribution in GameContributors[PlaceId] do
+		ContributorsGroup:AddLabel("[<font color=\"rgb(255, 255, 100)\">" .. Name .. "</font>] " .. Contribution)
+	end
+end
+
+-- Loaded Notification
+task.wait(1)
+
 Library:Notify({
 	Title = "Drift",
-	Description = "Loaded Succesfully!",
+	Description = "Loaded Successfully!",
 	Time = 5,
 })
+
 setclipboard("dsc.gg/getdrift")
+
 Library:Notify({
 	Title = "Drift",
 	Description = "Copied Discord Link",

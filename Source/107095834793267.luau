@@ -1,15 +1,20 @@
-local repo = "https://raw.githubusercontent.com/deividcomsono/Obsidian/main/"
-local Library = loadstring(game:HttpGet(repo .. "Library.lua"))()
+-- UI Setup
+local Repository = "https://raw.githubusercontent.com/deividcomsono/Obsidian/main/"
+local Library = loadstring(game:HttpGet(Repository .. "Library.lua"))()
 local ThemeManager = loadstring(game:HttpGet("https://pastefy.app/hOgTtQmZ/raw"))()
-local SaveManager = loadstring(game:HttpGet(repo .. "addons/SaveManager.lua"))()
+local SaveManager = loadstring(game:HttpGet(Repository .. "addons/SaveManager.lua"))()
 local Options = Library.Options
 local Toggles = Library.Toggles
+
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
+
 Library.ShowToggleFrameInKeybinds = true
+
+-- Window & Tabs
 local Window = Library:CreateWindow({
 	Title = "Drift",
 	Footer = "Oil Empire",
@@ -17,59 +22,67 @@ local Window = Library:CreateWindow({
 	NotifySide = "Right",
 	ShowCustomCursor = true,
 	AutoShow = true,
-    SidebarCompacted = true,
-    DisableSearch = true,
-    Animations = { TabSwitch = true },
-    TabTransitionTime = 0.65,
+	SidebarCompacted = true,
+	DisableSearch = true,
+	Animations = { TabSwitch = true },
+	TabTransitionTime = 0.65,
 })
 
 local Tabs = {
 	Main = Window:AddTab("Main", "house", "Useful features to farm faster"),
 	["UI Settings"] = Window:AddTab("UI Settings", "settings", "Customize the Interface"),
-	Cont = Window:AddTab("Credits", "info", "People who helped us throughout this project"),
+	Credits = Window:AddTab("Credits", "info", "People who helped us throughout this project"),
 }
 
 Tabs.Main:UpdateWarningBox({
-    Title = "Welcome",
-    Text = "Hello! Thanks for choosing Drift, Your #1 choice for a keyless experience!",
-    IsNormal = true,
-    Visible = true,
-    LockSize = true,
+	Title = "Welcome",
+	Text = "Hello! Thanks for choosing Drift, Your #1 choice for a keyless experience!",
+	IsNormal = true,
+	Visible = true,
+	LockSize = true,
 })
 
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-local MarketplaceService = game:GetService("MarketplaceService")
-local function TeleportTo(part)
+-- Helper Functions
+local function TeleportTo(Part)
 	local Character = LocalPlayer.Character
-	if not Character then return false end
+	if not Character then
+		return false
+	end
 
 	local HumanoidRootPart = Character:FindFirstChild("HumanoidRootPart")
-	if not HumanoidRootPart then return false end
+	if not HumanoidRootPart then
+		return false
+	end
 
-	if part and part:IsA("BasePart") then
-		HumanoidRootPart.CFrame = part.CFrame * CFrame.new(0, 3, 0)
+	if Part and Part:IsA("BasePart") then
+		HumanoidRootPart.CFrame = Part.CFrame * CFrame.new(0, 3, 0)
 		return true
 	end
+
 	return false
 end
 
 local function GetPlayerPlot()
-	local plotAttr = LocalPlayer:GetAttribute("Plot")
-	if not plotAttr then return nil, nil end
+	local PlotAttribute = LocalPlayer:GetAttribute("Plot")
+	if not PlotAttribute then
+		return nil, nil
+	end
 
-	local playerPlot = workspace.Plots:FindFirstChild(plotAttr) or workspace.Plots:FindFirstChild("Plot" .. tostring(plotAttr))
-	return playerPlot, plotAttr
+	local PlayerPlot = workspace.Plots:FindFirstChild(PlotAttribute) or workspace.Plots:FindFirstChild("Plot" .. tostring(PlotAttribute))
+	return PlayerPlot, PlotAttribute
 end
 
-local flyThread = nil
-local flying = false
-local noclipConnection = nil
-local infiniteJumpConnection = nil
-local originalWalkspeed = 16
-local originalJumpPower = 50
+-- State Variables
+local FlyThread = nil
+local IsFlying = false
+local NoClipConnection = nil
+local InfiniteJumpConnection = nil
+local OriginalWalkSpeed = 16
+local OriginalJumpPower = 50
+
+-- Automations Group
 local AutomationsGroupBox = Tabs.Main:AddLeftGroupbox("Automations", "repeat")
-local autoCollectGroupRewardsConnection = nil
+local AutoCollectGroupRewardsConnection = nil
 
 AutomationsGroupBox:AddToggle("AutoCollectGroupRewards", {
 	Text = "Auto Collect Group Rewards",
@@ -78,7 +91,7 @@ AutomationsGroupBox:AddToggle("AutoCollectGroupRewards", {
 
 	Callback = function(Value)
 		if Value then
-			autoCollectGroupRewardsConnection = RunService.Heartbeat:Connect(function()
+			AutoCollectGroupRewardsConnection = RunService.Heartbeat:Connect(function()
 				if Toggles.AutoCollectGroupRewards and Toggles.AutoCollectGroupRewards.Value then
 					pcall(function()
 						ReplicatedStorage:WaitForChild("Packages"):WaitForChild("Knit"):WaitForChild("Services"):WaitForChild("MarketPlaceService"):WaitForChild("RE"):WaitForChild("ClaimReward"):FireServer()
@@ -86,15 +99,16 @@ AutomationsGroupBox:AddToggle("AutoCollectGroupRewards", {
 				end
 			end)
 		else
-			if autoCollectGroupRewardsConnection then
-				autoCollectGroupRewardsConnection:Disconnect()
-				autoCollectGroupRewardsConnection = nil
+			if AutoCollectGroupRewardsConnection then
+				AutoCollectGroupRewardsConnection:Disconnect()
+				AutoCollectGroupRewardsConnection = nil
 			end
 		end
 	end,
 })
 
-local autoSellConnection = nil
+local AutoSellConnection = nil
+
 AutomationsGroupBox:AddToggle("AutoSellFuel", {
 	Text = "Auto Sell Fuel",
 	Tooltip = "Automatically sells fuel repeatedly",
@@ -102,7 +116,7 @@ AutomationsGroupBox:AddToggle("AutoSellFuel", {
 
 	Callback = function(Value)
 		if Value then
-			autoSellConnection = RunService.Heartbeat:Connect(function()
+			AutoSellConnection = RunService.Heartbeat:Connect(function()
 				if Toggles.AutoSellFuel and Toggles.AutoSellFuel.Value then
 					pcall(function()
 						ReplicatedStorage:WaitForChild("Packages"):WaitForChild("Knit"):WaitForChild("Services"):WaitForChild("BaseService"):WaitForChild("RE"):WaitForChild("SellGas"):FireServer()
@@ -110,15 +124,15 @@ AutomationsGroupBox:AddToggle("AutoSellFuel", {
 				end
 			end)
 		else
-			if autoSellConnection then
-				autoSellConnection:Disconnect()
-				autoSellConnection = nil
+			if AutoSellConnection then
+				AutoSellConnection:Disconnect()
+				AutoSellConnection = nil
 			end
 		end
 	end,
 })
 
-local autoCollectThread = nil
+local AutoCollectThread = nil
 
 AutomationsGroupBox:AddToggle("AutoCollectFuel", {
 	Text = "Auto Collect Fuel",
@@ -127,33 +141,44 @@ AutomationsGroupBox:AddToggle("AutoCollectFuel", {
 
 	Callback = function(Value)
 		if Value then
-			autoCollectThread = task.spawn(function()
+			AutoCollectThread = task.spawn(function()
 				while Toggles.AutoCollectFuel and Toggles.AutoCollectFuel.Value do
 					pcall(function()
 						local Character = LocalPlayer.Character
-						if not Character then return end
+						if not Character then
+							return
+						end
 
 						local HumanoidRootPart = Character:FindFirstChild("HumanoidRootPart")
-						if not HumanoidRootPart then return end
+						if not HumanoidRootPart then
+							return
+						end
 
-						local plotAttr = LocalPlayer:GetAttribute("Plot")
-						if not plotAttr then return end
+						local PlotAttribute = LocalPlayer:GetAttribute("Plot")
+						if not PlotAttribute then
+							return
+						end
 
-						local playerPlot = workspace.Plots:FindFirstChild(plotAttr) or workspace.Plots:FindFirstChild("Plot" .. tostring(plotAttr))
-						if not playerPlot then return end
+						local PlayerPlot = workspace.Plots:FindFirstChild(PlotAttribute) or workspace.Plots:FindFirstChild("Plot" .. tostring(PlotAttribute))
+						if not PlayerPlot then
+							return
+						end
 
-						local buildings = playerPlot:FindFirstChild("Buildings")
-						if not buildings then return end
+						local Buildings = PlayerPlot:FindFirstChild("Buildings")
+						if not Buildings then
+							return
+						end
 
-						local PlaceArea = playerPlot:FindFirstChild("PlaceArea")
-						local descendants = buildings:GetDescendants()
-						for _, value in pairs(descendants) do
-							if not (Toggles.AutoCollectFuel and Toggles.AutoCollectFuel.Value) then break end
+						local PlaceArea = PlayerPlot:FindFirstChild("PlaceArea")
+						for _, Descendant in Buildings:QueryDescendants("Instance") do
+							if not (Toggles.AutoCollectFuel and Toggles.AutoCollectFuel.Value) then
+								break
+							end
 							pcall(function()
-								firetouchinterest(HumanoidRootPart, value, 0)
+								firetouchinterest(HumanoidRootPart, Descendant, 0)
 							end)
 							pcall(function()
-								firetouchinterest(HumanoidRootPart, value, 1)
+								firetouchinterest(HumanoidRootPart, Descendant, 1)
 							end)
 						end
 						if PlaceArea then
@@ -166,25 +191,27 @@ AutomationsGroupBox:AddToggle("AutoCollectFuel", {
 						end
 					end)
 
-					wait()
+					task.wait()
 				end
 			end)
 		else
-			if autoCollectThread then
-				task.cancel(autoCollectThread)
-				autoCollectThread = nil
+			if AutoCollectThread then
+				task.cancel(AutoCollectThread)
+				AutoCollectThread = nil
 			end
 		end
 	end,
 })
+
+-- Pick Up All
 AutomationsGroupBox:AddDivider()
 AutomationsGroupBox:AddButton({
 	Text = "Pick Up All",
 	Tooltip = "Picks up all buildings from your plot (double click to confirm)",
 	Func = function()
 		task.spawn(function()
-			local plotAttr = LocalPlayer:GetAttribute("Plot")
-			if not plotAttr then
+			local PlotAttribute = LocalPlayer:GetAttribute("Plot")
+			if not PlotAttribute then
 				Library:Notify({
 					Title = "Error",
 					Description = "Could not find your plot attribute!",
@@ -193,8 +220,8 @@ AutomationsGroupBox:AddButton({
 				return
 			end
 
-			local playerPlot = workspace.Plots:FindFirstChild(plotAttr) or workspace.Plots:FindFirstChild("Plot" .. tostring(plotAttr))
-			if not playerPlot then
+			local PlayerPlot = workspace.Plots:FindFirstChild(PlotAttribute) or workspace.Plots:FindFirstChild("Plot" .. tostring(PlotAttribute))
+			if not PlayerPlot then
 				Library:Notify({
 					Title = "Error",
 					Description = "Could not find your plot!",
@@ -203,8 +230,8 @@ AutomationsGroupBox:AddButton({
 				return
 			end
 
-			local buildings = playerPlot:FindFirstChild("Buildings")
-			if not buildings then
+			local Buildings = PlayerPlot:FindFirstChild("Buildings")
+			if not Buildings then
 				Library:Notify({
 					Title = "Error",
 					Description = "No buildings folder found!",
@@ -213,64 +240,58 @@ AutomationsGroupBox:AddButton({
 				return
 			end
 
-			local totalPickedUp = 0
-			local maxAttempts = 100
+			local TotalPickedUp = 0
+			local MaxAttempts = 100
 
-			for attempt = 1, maxAttempts do
-				local currentBuildings = {}
-				for _, building in pairs(buildings:GetChildren()) do
-					if building:IsA("Model") then
-						table.insert(currentBuildings, building.Name)
-					end
+			for Attempt = 1, MaxAttempts do
+				local CurrentBuildings = {}
+				for _, Building in Buildings:QueryDescendants("> Model") do
+					table.insert(CurrentBuildings, Building.Name)
 				end
 
-				if #currentBuildings == 0 then
+				if #CurrentBuildings == 0 then
 					break
 				end
 
-				for _, buildingName in pairs(currentBuildings) do
+				for _, BuildingName in CurrentBuildings do
 					pcall(function()
-						local args = {
-							buildingName,
+						local Arguments = {
+							BuildingName,
 							"PickUp"
 						}
-						ReplicatedStorage:WaitForChild("Packages"):WaitForChild("Knit"):WaitForChild("Services"):WaitForChild("BaseService"):WaitForChild("RE"):WaitForChild("DeleteBuilding"):FireServer(unpack(args))
-						totalPickedUp = totalPickedUp + 1
+						ReplicatedStorage:WaitForChild("Packages"):WaitForChild("Knit"):WaitForChild("Services"):WaitForChild("BaseService"):WaitForChild("RE"):WaitForChild("DeleteBuilding"):FireServer(unpack(Arguments))
+						TotalPickedUp = TotalPickedUp + 1
 					end)
-					wait(0.15)
+					task.wait(0.15)
 				end
 
-				wait(0.5)
+				task.wait(0.5)
 
-				local remaining = 0
-				for _, building in pairs(buildings:GetChildren()) do
-					if building:IsA("Model") then
-						remaining = remaining + 1
-					end
+				local Remaining = 0
+				for _, Building in Buildings:QueryDescendants("> Model") do
+					Remaining = Remaining + 1
 				end
 
-				if remaining == 0 then
+				if Remaining == 0 then
 					break
 				end
 			end
 
-			local finalRemaining = 0
-			for _, building in pairs(buildings:GetChildren()) do
-				if building:IsA("Model") then
-					finalRemaining = finalRemaining + 1
-				end
+			local FinalRemaining = 0
+			for _, Building in Buildings:QueryDescendants("> Model") do
+				FinalRemaining = FinalRemaining + 1
 			end
 
-			if finalRemaining == 0 then
+			if FinalRemaining == 0 then
 				Library:Notify({
 					Title = "Pick Up All",
-					Description = "Successfully picked up all buildings! (" .. totalPickedUp .. " requests sent)",
+					Description = "Successfully picked up all buildings! (" .. TotalPickedUp .. " requests sent)",
 					Time = 4,
 				})
 			else
 				Library:Notify({
 					Title = "Pick Up All",
-					Description = finalRemaining .. " buildings still remaining. (" .. totalPickedUp .. " requests sent)",
+					Description = FinalRemaining .. " buildings still remaining. (" .. TotalPickedUp .. " requests sent)",
 					Time = 4,
 				})
 			end
@@ -279,6 +300,7 @@ AutomationsGroupBox:AddButton({
 	DoubleClick = true,
 })
 
+-- Teleports Group
 local TeleportsGroupBox = Tabs.Main:AddLeftGroupbox("Teleports", "map-pin")
 
 TeleportsGroupBox:AddButton({
@@ -286,16 +308,19 @@ TeleportsGroupBox:AddButton({
 	Tooltip = "Teleport to your base",
 	Func = function()
 		pcall(function()
-			local playerPlot = GetPlayerPlot()
-			if not playerPlot then
+			local PlayerPlot = GetPlayerPlot()
+			if not PlayerPlot then
 				Library:Notify({ Title = "Error", Description = "Could not find your plot!", Time = 3 })
 				return
 			end
-			local tpPart = playerPlot:FindFirstChild("TpHere")
-			if tpPart then
-				if TeleportTo(tpPart) then
-					Library:Notify({ Title = "Teleport", Description = "Teleported to your base!", Time = 2 })
-				end
+
+			local TpPart = PlayerPlot:FindFirstChild("TpHere")
+			if not TpPart then
+				return
+			end
+
+			if TeleportTo(TpPart) then
+				Library:Notify({ Title = "Teleport", Description = "Teleported to your base!", Time = 2 })
 			end
 		end)
 	end,
@@ -306,8 +331,8 @@ TeleportsGroupBox:AddButton({
 	Tooltip = "Teleport to the Drill Shop",
 	Func = function()
 		pcall(function()
-			local part = workspace.Stores["Drill Shop"].Main.Primary
-			if TeleportTo(part) then
+			local Part = workspace.Stores["Drill Shop"].Main.Primary
+			if TeleportTo(Part) then
 				Library:Notify({ Title = "Teleport", Description = "Teleported to Drill Shop!", Time = 2 })
 			end
 		end)
@@ -319,8 +344,8 @@ TeleportsGroupBox:AddButton({
 	Tooltip = "Teleport to the Refinery Shop",
 	Func = function()
 		pcall(function()
-			local part = workspace.Stores["Refinery Shop"].Main.Primary
-			if TeleportTo(part) then
+			local Part = workspace.Stores["Refinery Shop"].Main.Primary
+			if TeleportTo(Part) then
 				Library:Notify({ Title = "Teleport", Description = "Teleported to Refinery Shop!", Time = 2 })
 			end
 		end)
@@ -332,8 +357,8 @@ TeleportsGroupBox:AddButton({
 	Tooltip = "Teleport to the Totem Shop",
 	Func = function()
 		pcall(function()
-			local part = workspace.Stores["Totem Shop"].Main.Primary
-			if TeleportTo(part) then
+			local Part = workspace.Stores["Totem Shop"].Main.Primary
+			if TeleportTo(Part) then
 				Library:Notify({ Title = "Teleport", Description = "Teleported to Totem Shop!", Time = 2 })
 			end
 		end)
@@ -345,8 +370,8 @@ TeleportsGroupBox:AddButton({
 	Tooltip = "Teleport to the Decoration Shop",
 	Func = function()
 		pcall(function()
-			local part = workspace:GetChildren()[13]:GetChildren()[2].Main.Primary
-			if TeleportTo(part) then
+			local Part = workspace:GetChildren()[13]:GetChildren()[2].Main.Primary
+			if TeleportTo(Part) then
 				Library:Notify({ Title = "Teleport", Description = "Teleported to Decoration Shop!", Time = 2 })
 			end
 		end)
@@ -358,8 +383,8 @@ TeleportsGroupBox:AddButton({
 	Tooltip = "Teleport to the Gasoline Sell area",
 	Func = function()
 		pcall(function()
-			local part = workspace.Stores.Sell.Main.Primary
-			if TeleportTo(part) then
+			local Part = workspace.Stores.Sell.Main.Primary
+			if TeleportTo(Part) then
 				Library:Notify({ Title = "Teleport", Description = "Teleported to Gasoline Sell!", Time = 2 })
 			end
 		end)
@@ -375,8 +400,10 @@ TeleportsGroupBox:AddDropdown("SelectPlotDropdown", {
 	Text = "Select Plot",
 	Tooltip = "Select a plot to teleport to",
 	FormatDisplayValue = function(Value)
-		local num = Value:match("%d+")
-		if num then return "Plot " .. num end
+		local Number = Value:match("%d+")
+		if Number then
+			return "Plot " .. Number
+		end
 		return Value
 	end,
 })
@@ -385,31 +412,36 @@ TeleportsGroupBox:AddButton({
 	Text = "Teleport To Selected",
 	Tooltip = "Teleport to the selected plot",
 	Func = function()
-		local selectedPlot = Options.SelectPlotDropdown.Value
-		if not selectedPlot or selectedPlot == "" then
+		local SelectedPlot = Options.SelectPlotDropdown.Value
+		if not SelectedPlot or SelectedPlot == "" then
 			Library:Notify({ Title = "Error", Description = "Please select a plot first!", Time = 3 })
 			return
 		end
 
 		pcall(function()
-			local targetPlot = workspace.Plots:FindFirstChild(selectedPlot)
-			if targetPlot then
-				local tpPart = targetPlot:FindFirstChild("TpHere")
-				if tpPart then
-					if TeleportTo(tpPart) then
-						local displayName = selectedPlot:match("%d+")
-						Library:Notify({ Title = "Teleport", Description = "Teleported to Plot " .. (displayName or selectedPlot) .. "!", Time = 2 })
-					end
-				end
-			else
-				Library:Notify({ Title = "Error", Description = "Could not find " .. selectedPlot .. "!", Time = 3 })
+			local TargetPlot = workspace.Plots:FindFirstChild(SelectedPlot)
+			if not TargetPlot then
+				Library:Notify({ Title = "Error", Description = "Could not find " .. SelectedPlot .. "!", Time = 3 })
+				return
+			end
+
+			local TpPart = TargetPlot:FindFirstChild("TpHere")
+			if not TpPart then
+				return
+			end
+
+			if TeleportTo(TpPart) then
+				local DisplayName = SelectedPlot:match("%d+")
+				Library:Notify({ Title = "Teleport", Description = "Teleported to Plot " .. (DisplayName or SelectedPlot) .. "!", Time = 2 })
 			end
 		end)
 	end,
 })
 
+-- Shop Group
 local ShopGroupBox = Tabs.Main:AddRightGroupbox("Shop", "shopping-cart")
 
+-- Drill Shop
 local DrillOptions = {
 	"Basic Drill", "Strong Drill", "Enhanced Drill", "Speed Drill",
 	"Reinforced Drill", "Industrial Drill", "Double Industrial Drill",
@@ -427,7 +459,7 @@ ShopGroupBox:AddDropdown("DrillShopDropdown", {
 	Searchable = true,
 })
 
-local purchaseDrillThread = nil
+local PurchaseDrillThread = nil
 
 ShopGroupBox:AddToggle("PurchaseDrill", {
 	Text = "Purchase Drill",
@@ -436,18 +468,18 @@ ShopGroupBox:AddToggle("PurchaseDrill", {
 
 	Callback = function(Value)
 		if Value then
-			purchaseDrillThread = task.spawn(function()
-				local selectedDrills = Options.DrillShopDropdown.Value
-				local purchaseAmount = Options.DrillPurchaseAmount.Value or 1
+			PurchaseDrillThread = task.spawn(function()
+				local SelectedDrills = Options.DrillShopDropdown.Value
+				local PurchaseAmount = Options.DrillPurchaseAmount.Value or 1
 
-				for drillName, isSelected in pairs(selectedDrills) do
-					if isSelected then
-						for i = 1, purchaseAmount do
+				for DrillName, IsSelected in SelectedDrills do
+					if IsSelected then
+						for Index = 1, PurchaseAmount do
 							pcall(function()
-								local args = { "DrillShop", drillName }
-								ReplicatedStorage:WaitForChild("Packages"):WaitForChild("Knit"):WaitForChild("Services"):WaitForChild("StoresService"):WaitForChild("RE"):WaitForChild("Purchase"):FireServer(unpack(args))
+								local Arguments = { "DrillShop", DrillName }
+								ReplicatedStorage:WaitForChild("Packages"):WaitForChild("Knit"):WaitForChild("Services"):WaitForChild("StoresService"):WaitForChild("RE"):WaitForChild("Purchase"):FireServer(unpack(Arguments))
 							end)
-							wait(0.1)
+							task.wait(0.1)
 						end
 					end
 				end
@@ -455,15 +487,15 @@ ShopGroupBox:AddToggle("PurchaseDrill", {
 				Toggles.PurchaseDrill:SetValue(false)
 			end)
 		else
-			if purchaseDrillThread then
-				task.cancel(purchaseDrillThread)
-				purchaseDrillThread = nil
+			if PurchaseDrillThread then
+				task.cancel(PurchaseDrillThread)
+				PurchaseDrillThread = nil
 			end
 		end
 	end,
 })
 
-local spamDrillConnection = nil
+local SpamDrillConnection = nil
 
 ShopGroupBox:AddToggle("SpamPurchaseDrill", {
 	Text = "Spam Purchase",
@@ -476,23 +508,23 @@ ShopGroupBox:AddToggle("SpamPurchaseDrill", {
 		end
 
 		if Value then
-			spamDrillConnection = RunService.Heartbeat:Connect(function()
+			SpamDrillConnection = RunService.Heartbeat:Connect(function()
 				if Toggles.SpamPurchaseDrill and Toggles.SpamPurchaseDrill.Value then
-					local selectedDrills = Options.DrillShopDropdown.Value
-					for drillName, isSelected in pairs(selectedDrills) do
-						if isSelected then
+					local SelectedDrills = Options.DrillShopDropdown.Value
+					for DrillName, IsSelected in SelectedDrills do
+						if IsSelected then
 							pcall(function()
-								local args = { "DrillShop", drillName }
-								ReplicatedStorage:WaitForChild("Packages"):WaitForChild("Knit"):WaitForChild("Services"):WaitForChild("StoresService"):WaitForChild("RE"):WaitForChild("Purchase"):FireServer(unpack(args))
+								local Arguments = { "DrillShop", DrillName }
+								ReplicatedStorage:WaitForChild("Packages"):WaitForChild("Knit"):WaitForChild("Services"):WaitForChild("StoresService"):WaitForChild("RE"):WaitForChild("Purchase"):FireServer(unpack(Arguments))
 							end)
 						end
 					end
 				end
 			end)
 		else
-			if spamDrillConnection then
-				spamDrillConnection:Disconnect()
-				spamDrillConnection = nil
+			if SpamDrillConnection then
+				SpamDrillConnection:Disconnect()
+				SpamDrillConnection = nil
 			end
 		end
 	end,
@@ -508,6 +540,7 @@ ShopGroupBox:AddSlider("DrillPurchaseAmount", {
 	Compact = false,
 })
 
+-- Refinery Shop
 ShopGroupBox:AddDivider("Refinery")
 
 local RefineryOptions = {
@@ -528,7 +561,7 @@ ShopGroupBox:AddDropdown("RefineryShopDropdown", {
 	Searchable = true,
 })
 
-local purchaseRefineryThread = nil
+local PurchaseRefineryThread = nil
 
 ShopGroupBox:AddToggle("PurchaseRefinery", {
 	Text = "Purchase Refinery",
@@ -537,18 +570,18 @@ ShopGroupBox:AddToggle("PurchaseRefinery", {
 
 	Callback = function(Value)
 		if Value then
-			purchaseRefineryThread = task.spawn(function()
-				local selectedRefineries = Options.RefineryShopDropdown.Value
-				local purchaseAmount = Options.RefineryPurchaseAmount.Value or 1
+			PurchaseRefineryThread = task.spawn(function()
+				local SelectedRefineries = Options.RefineryShopDropdown.Value
+				local PurchaseAmount = Options.RefineryPurchaseAmount.Value or 1
 
-				for refineryName, isSelected in pairs(selectedRefineries) do
-					if isSelected then
-						for i = 1, purchaseAmount do
+				for RefineryName, IsSelected in SelectedRefineries do
+					if IsSelected then
+						for Index = 1, PurchaseAmount do
 							pcall(function()
-								local args = { "RefineryShop", refineryName }
-								ReplicatedStorage:WaitForChild("Packages"):WaitForChild("Knit"):WaitForChild("Services"):WaitForChild("StoresService"):WaitForChild("RE"):WaitForChild("Purchase"):FireServer(unpack(args))
+								local Arguments = { "RefineryShop", RefineryName }
+								ReplicatedStorage:WaitForChild("Packages"):WaitForChild("Knit"):WaitForChild("Services"):WaitForChild("StoresService"):WaitForChild("RE"):WaitForChild("Purchase"):FireServer(unpack(Arguments))
 							end)
-							wait(0.1)
+							task.wait(0.1)
 						end
 					end
 				end
@@ -556,15 +589,15 @@ ShopGroupBox:AddToggle("PurchaseRefinery", {
 				Toggles.PurchaseRefinery:SetValue(false)
 			end)
 		else
-			if purchaseRefineryThread then
-				task.cancel(purchaseRefineryThread)
-				purchaseRefineryThread = nil
+			if PurchaseRefineryThread then
+				task.cancel(PurchaseRefineryThread)
+				PurchaseRefineryThread = nil
 			end
 		end
 	end,
 })
 
-local spamRefineryConnection = nil
+local SpamRefineryConnection = nil
 
 ShopGroupBox:AddToggle("SpamPurchaseRefinery", {
 	Text = "Spam Purchase",
@@ -577,23 +610,23 @@ ShopGroupBox:AddToggle("SpamPurchaseRefinery", {
 		end
 
 		if Value then
-			spamRefineryConnection = RunService.Heartbeat:Connect(function()
+			SpamRefineryConnection = RunService.Heartbeat:Connect(function()
 				if Toggles.SpamPurchaseRefinery and Toggles.SpamPurchaseRefinery.Value then
-					local selectedRefineries = Options.RefineryShopDropdown.Value
-					for refineryName, isSelected in pairs(selectedRefineries) do
-						if isSelected then
+					local SelectedRefineries = Options.RefineryShopDropdown.Value
+					for RefineryName, IsSelected in SelectedRefineries do
+						if IsSelected then
 							pcall(function()
-								local args = { "RefineryShop", refineryName }
-								ReplicatedStorage:WaitForChild("Packages"):WaitForChild("Knit"):WaitForChild("Services"):WaitForChild("StoresService"):WaitForChild("RE"):WaitForChild("Purchase"):FireServer(unpack(args))
+								local Arguments = { "RefineryShop", RefineryName }
+								ReplicatedStorage:WaitForChild("Packages"):WaitForChild("Knit"):WaitForChild("Services"):WaitForChild("StoresService"):WaitForChild("RE"):WaitForChild("Purchase"):FireServer(unpack(Arguments))
 							end)
 						end
 					end
 				end
 			end)
 		else
-			if spamRefineryConnection then
-				spamRefineryConnection:Disconnect()
-				spamRefineryConnection = nil
+			if SpamRefineryConnection then
+				SpamRefineryConnection:Disconnect()
+				SpamRefineryConnection = nil
 			end
 		end
 	end,
@@ -609,6 +642,7 @@ ShopGroupBox:AddSlider("RefineryPurchaseAmount", {
 	Compact = false,
 })
 
+-- Totem Shop
 ShopGroupBox:AddDivider("Totems")
 
 local TotemOptions = {
@@ -625,7 +659,7 @@ ShopGroupBox:AddDropdown("TotemShopDropdown", {
 	Searchable = true,
 })
 
-local purchaseTotemThread = nil
+local PurchaseTotemThread = nil
 
 ShopGroupBox:AddToggle("PurchaseTotem", {
 	Text = "Purchase Totem",
@@ -634,18 +668,18 @@ ShopGroupBox:AddToggle("PurchaseTotem", {
 
 	Callback = function(Value)
 		if Value then
-			purchaseTotemThread = task.spawn(function()
-				local selectedTotems = Options.TotemShopDropdown.Value
-				local purchaseAmount = Options.TotemPurchaseAmount.Value or 1
+			PurchaseTotemThread = task.spawn(function()
+				local SelectedTotems = Options.TotemShopDropdown.Value
+				local PurchaseAmount = Options.TotemPurchaseAmount.Value or 1
 
-				for totemName, isSelected in pairs(selectedTotems) do
-					if isSelected then
-						for i = 1, purchaseAmount do
+				for TotemName, IsSelected in SelectedTotems do
+					if IsSelected then
+						for Index = 1, PurchaseAmount do
 							pcall(function()
-								local args = { "TotemShop", totemName }
-								ReplicatedStorage:WaitForChild("Packages"):WaitForChild("Knit"):WaitForChild("Services"):WaitForChild("StoresService"):WaitForChild("RE"):WaitForChild("Purchase"):FireServer(unpack(args))
+								local Arguments = { "TotemShop", TotemName }
+								ReplicatedStorage:WaitForChild("Packages"):WaitForChild("Knit"):WaitForChild("Services"):WaitForChild("StoresService"):WaitForChild("RE"):WaitForChild("Purchase"):FireServer(unpack(Arguments))
 							end)
-							wait(0.1)
+							task.wait(0.1)
 						end
 					end
 				end
@@ -653,15 +687,15 @@ ShopGroupBox:AddToggle("PurchaseTotem", {
 				Toggles.PurchaseTotem:SetValue(false)
 			end)
 		else
-			if purchaseTotemThread then
-				task.cancel(purchaseTotemThread)
-				purchaseTotemThread = nil
+			if PurchaseTotemThread then
+				task.cancel(PurchaseTotemThread)
+				PurchaseTotemThread = nil
 			end
 		end
 	end,
 })
 
-local spamTotemConnection = nil
+local SpamTotemConnection = nil
 
 ShopGroupBox:AddToggle("SpamPurchaseTotem", {
 	Text = "Spam Purchase",
@@ -674,23 +708,23 @@ ShopGroupBox:AddToggle("SpamPurchaseTotem", {
 		end
 
 		if Value then
-			spamTotemConnection = RunService.Heartbeat:Connect(function()
+			SpamTotemConnection = RunService.Heartbeat:Connect(function()
 				if Toggles.SpamPurchaseTotem and Toggles.SpamPurchaseTotem.Value then
-					local selectedTotems = Options.TotemShopDropdown.Value
-					for totemName, isSelected in pairs(selectedTotems) do
-						if isSelected then
+					local SelectedTotems = Options.TotemShopDropdown.Value
+					for TotemName, IsSelected in SelectedTotems do
+						if IsSelected then
 							pcall(function()
-								local args = { "TotemShop", totemName }
-								ReplicatedStorage:WaitForChild("Packages"):WaitForChild("Knit"):WaitForChild("Services"):WaitForChild("StoresService"):WaitForChild("RE"):WaitForChild("Purchase"):FireServer(unpack(args))
+								local Arguments = { "TotemShop", TotemName }
+								ReplicatedStorage:WaitForChild("Packages"):WaitForChild("Knit"):WaitForChild("Services"):WaitForChild("StoresService"):WaitForChild("RE"):WaitForChild("Purchase"):FireServer(unpack(Arguments))
 							end)
 						end
 					end
 				end
 			end)
 		else
-			if spamTotemConnection then
-				spamTotemConnection:Disconnect()
-				spamTotemConnection = nil
+			if SpamTotemConnection then
+				SpamTotemConnection:Disconnect()
+				SpamTotemConnection = nil
 			end
 		end
 	end,
@@ -706,9 +740,11 @@ ShopGroupBox:AddSlider("TotemPurchaseAmount", {
 	Compact = false,
 })
 
+-- Player Group
 local PlayerGroupBox = Tabs.Main:AddLeftGroupbox("Player", "user")
 
 AutomationsGroupBox = nil
+
 PlayerGroupBox:AddToggle("WalkspeedToggle", {
 	Text = "Walkspeed",
 	Tooltip = "Change your walkspeed",
@@ -720,15 +756,20 @@ PlayerGroupBox:AddToggle("WalkspeedToggle", {
 		end
 
 		local Character = LocalPlayer.Character
-		if not Character then return end
+		if not Character then
+			return
+		end
+
 		local Humanoid = Character:FindFirstChildOfClass("Humanoid")
-		if not Humanoid then return end
+		if not Humanoid then
+			return
+		end
 
 		if Value then
-			originalWalkspeed = Humanoid.WalkSpeed
+			OriginalWalkSpeed = Humanoid.WalkSpeed
 			Humanoid.WalkSpeed = Options.SpeedValue and Options.SpeedValue.Value or 16
 		else
-			Humanoid.WalkSpeed = originalWalkspeed
+			Humanoid.WalkSpeed = OriginalWalkSpeed
 		end
 	end,
 })
@@ -766,67 +807,67 @@ PlayerGroupBox:AddToggle("FlyToggle", {
 			Options.FlySpeed:SetVisible(Value)
 		end
 
-		flying = Value
+		IsFlying = Value
 
 		if Value then
-			flyThread = task.spawn(function()
+			FlyThread = task.spawn(function()
 				local Camera = workspace.CurrentCamera
 
-				while flying do
+				while IsFlying do
 					local Character = LocalPlayer.Character
 					if not Character then
-						wait()
+						task.wait()
 						continue
 					end
 
 					local HumanoidRootPart = Character:FindFirstChild("HumanoidRootPart")
 					local Humanoid = Character:FindFirstChildOfClass("Humanoid")
 					if not HumanoidRootPart or not Humanoid then
-						wait()
+						task.wait()
 						continue
 					end
 
 					HumanoidRootPart.Velocity = Vector3.new(0, 0, 0)
 
-					local speed = Options.FlySpeed and Options.FlySpeed.Value or 50
-					local moveDirection = Vector3.new(0, 0, 0)
+					local Speed = Options.FlySpeed and Options.FlySpeed.Value or 50
+					local MoveDirection = Vector3.new(0, 0, 0)
 
-					local lookVector = Camera.CFrame.LookVector
-					local rightVector = Camera.CFrame.RightVector
+					local LookVector = Camera.CFrame.LookVector
+					local RightVector = Camera.CFrame.RightVector
 
 					if UserInputService:IsKeyDown(Enum.KeyCode.W) then
-						moveDirection = moveDirection + lookVector
+						MoveDirection = MoveDirection + LookVector
 					end
 					if UserInputService:IsKeyDown(Enum.KeyCode.S) then
-						moveDirection = moveDirection - lookVector
+						MoveDirection = MoveDirection - LookVector
 					end
 					if UserInputService:IsKeyDown(Enum.KeyCode.A) then
-						moveDirection = moveDirection - rightVector
+						MoveDirection = MoveDirection - RightVector
 					end
 					if UserInputService:IsKeyDown(Enum.KeyCode.D) then
-						moveDirection = moveDirection + rightVector
+						MoveDirection = MoveDirection + RightVector
 					end
 					if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
-						moveDirection = moveDirection + Vector3.new(0, 1, 0)
+						MoveDirection = MoveDirection + Vector3.new(0, 1, 0)
 					end
 					if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then
-						moveDirection = moveDirection - Vector3.new(0, 1, 0)
+						MoveDirection = MoveDirection - Vector3.new(0, 1, 0)
 					end
 
-					if moveDirection.Magnitude > 0 then
-						moveDirection = moveDirection.Unit
+					if MoveDirection.Magnitude > 0 then
+						MoveDirection = MoveDirection.Unit
 					end
 
-					HumanoidRootPart.CFrame = HumanoidRootPart.CFrame + (moveDirection * speed * (1 / 60))
+					HumanoidRootPart.CFrame = HumanoidRootPart.CFrame + (MoveDirection * Speed * (1 / 60))
 
 					RunService.Heartbeat:Wait()
 				end
 			end)
 		else
-			flying = false
-			if flyThread then
-				task.cancel(flyThread)
-				flyThread = nil
+			IsFlying = false
+			if FlyThread then
+				task.cancel(FlyThread)
+				FlyThread = nil
 			end
 		end
 	end,
@@ -854,16 +895,21 @@ PlayerGroupBox:AddToggle("JumpPowerToggle", {
 		end
 
 		local Character = LocalPlayer.Character
-		if not Character then return end
+		if not Character then
+			return
+		end
+
 		local Humanoid = Character:FindFirstChildOfClass("Humanoid")
-		if not Humanoid then return end
+		if not Humanoid then
+			return
+		end
 
 		if Value then
-			originalJumpPower = Humanoid.JumpPower
+			OriginalJumpPower = Humanoid.JumpPower
 			Humanoid.UseJumpPower = true
 			Humanoid.JumpPower = Options.PowerValue and Options.PowerValue.Value or 50
 		else
-			Humanoid.JumpPower = originalJumpPower
+			Humanoid.JumpPower = OriginalJumpPower
 		end
 	end,
 })
@@ -901,7 +947,7 @@ PlayerGroupBox:AddToggle("InfiniteJump", {
 
 	Callback = function(Value)
 		if Value then
-			infiniteJumpConnection = UserInputService.JumpRequest:Connect(function()
+			InfiniteJumpConnection = UserInputService.JumpRequest:Connect(function()
 				if Toggles.InfiniteJump and Toggles.InfiniteJump.Value then
 					local Character = LocalPlayer.Character
 					if Character then
@@ -913,9 +959,9 @@ PlayerGroupBox:AddToggle("InfiniteJump", {
 				end
 			end)
 		else
-			if infiniteJumpConnection then
-				infiniteJumpConnection:Disconnect()
-				infiniteJumpConnection = nil
+			if InfiniteJumpConnection then
+				InfiniteJumpConnection:Disconnect()
+				InfiniteJumpConnection = nil
 			end
 		end
 	end,
@@ -928,42 +974,46 @@ PlayerGroupBox:AddToggle("NoClip", {
 
 	Callback = function(Value)
 		if Value then
-			noclipConnection = RunService.Stepped:Connect(function()
+			NoClipConnection = RunService.Stepped:Connect(function()
 				if Toggles.NoClip and Toggles.NoClip.Value then
 					local Character = LocalPlayer.Character
 					if Character then
-						for _, part in pairs(Character:GetDescendants()) do
-							if part:IsA("BasePart") then
-								part.CanCollide = false
-							end
+						for _, Part in Character:QueryDescendants("BasePart") do
+							Part.CanCollide = false
 						end
 					end
 				end
 			end)
 		else
-			if noclipConnection then
-				noclipConnection:Disconnect()
-				noclipConnection = nil
+			if NoClipConnection then
+				NoClipConnection:Disconnect()
+				NoClipConnection = nil
 			end
+
 			local Character = LocalPlayer.Character
 			if Character then
-				for _, part in pairs(Character:GetDescendants()) do
-					if part:IsA("BasePart") then
-						part.CanCollide = true
-					end
+				for _, Part in Character:QueryDescendants("BasePart") do
+					Part.CanCollide = true
 				end
 			end
 		end
 	end,
 })
 
+-- UI Settings
 local MenuGroup = Tabs["UI Settings"]:AddLeftGroupbox("Menu", "wrench")
-MenuGroup:AddLabel("Menu bind"):AddKeyPicker("MenuKeybind", { Default = "RightShift", NoUI = true, Text = "Menu keybind" })
+
+MenuGroup:AddLabel("Menu bind"):AddKeyPicker("MenuKeybind", {
+	Default = "RightShift",
+	NoUI = true,
+	Text = "Menu keybind",
+})
+
 MenuGroup:AddToggle("KeybindMenuOpen", {
 	Default = Library.KeybindFrame.Visible,
 	Text = "Open Keybind Menu",
-	Callback = function(value)
-		Library.KeybindFrame.Visible = value
+	Callback = function(Value)
+		Library.KeybindFrame.Visible = Value
 	end,
 })
 
@@ -989,51 +1039,124 @@ MenuGroup:AddDivider()
 MenuGroup:AddButton({
 	Text = "Unload",
 	Func = function()
-		if autoCollectGroupRewardsConnection then autoCollectGroupRewardsConnection:Disconnect() end
-		if autoSellConnection then autoSellConnection:Disconnect() end
-		if autoCollectThread then task.cancel(autoCollectThread) end
-		if purchaseDrillThread then task.cancel(purchaseDrillThread) end
-		if purchaseRefineryThread then task.cancel(purchaseRefineryThread) end
-		if purchaseTotemThread then task.cancel(purchaseTotemThread) end
-		if spamDrillConnection then spamDrillConnection:Disconnect() end
-		if spamRefineryConnection then spamRefineryConnection:Disconnect() end
-		if spamTotemConnection then spamTotemConnection:Disconnect() end
-		if flyThread then flying = false; task.cancel(flyThread) end
-		if noclipConnection then noclipConnection:Disconnect() end
-		if infiniteJumpConnection then infiniteJumpConnection:Disconnect() end
+		if AutoCollectGroupRewardsConnection then
+			AutoCollectGroupRewardsConnection:Disconnect()
+		end
+
+		if AutoSellConnection then
+			AutoSellConnection:Disconnect()
+		end
+
+		if AutoCollectThread then
+			task.cancel(AutoCollectThread)
+		end
+
+		if PurchaseDrillThread then
+			task.cancel(PurchaseDrillThread)
+		end
+
+		if PurchaseRefineryThread then
+			task.cancel(PurchaseRefineryThread)
+		end
+
+		if PurchaseTotemThread then
+			task.cancel(PurchaseTotemThread)
+		end
+
+		if SpamDrillConnection then
+			SpamDrillConnection:Disconnect()
+		end
+
+		if SpamRefineryConnection then
+			SpamRefineryConnection:Disconnect()
+		end
+
+		if SpamTotemConnection then
+			SpamTotemConnection:Disconnect()
+		end
+
+		if FlyThread then
+			IsFlying = false
+			task.cancel(FlyThread)
+		end
+
+		if NoClipConnection then
+			NoClipConnection:Disconnect()
+		end
+
+		if InfiniteJumpConnection then
+			InfiniteJumpConnection:Disconnect()
+		end
+
 		Library:Unload()
 	end,
 })
 
 Library.ToggleKeybind = Options.MenuKeybind
 
+-- Unload Handler
 Library:OnUnload(function()
-	if autoCollectGroupRewardsConnection then autoCollectGroupRewardsConnection:Disconnect() end
-	if autoSellConnection then autoSellConnection:Disconnect() end
-	if autoCollectThread then task.cancel(autoCollectThread) end
-	if purchaseDrillThread then task.cancel(purchaseDrillThread) end
-	if purchaseRefineryThread then task.cancel(purchaseRefineryThread) end
-	if purchaseTotemThread then task.cancel(purchaseTotemThread) end
-	if spamDrillConnection then spamDrillConnection:Disconnect() end
-	if spamRefineryConnection then spamRefineryConnection:Disconnect() end
-	if spamTotemConnection then spamTotemConnection:Disconnect() end
-	flying = false
-	if flyThread then task.cancel(flyThread) end
-	if noclipConnection then noclipConnection:Disconnect() end
-	if infiniteJumpConnection then infiniteJumpConnection:Disconnect() end
+	if AutoCollectGroupRewardsConnection then
+		AutoCollectGroupRewardsConnection:Disconnect()
+	end
+
+	if AutoSellConnection then
+		AutoSellConnection:Disconnect()
+	end
+
+	if AutoCollectThread then
+		task.cancel(AutoCollectThread)
+	end
+
+	if PurchaseDrillThread then
+		task.cancel(PurchaseDrillThread)
+	end
+
+	if PurchaseRefineryThread then
+		task.cancel(PurchaseRefineryThread)
+	end
+
+	if PurchaseTotemThread then
+		task.cancel(PurchaseTotemThread)
+	end
+
+	if SpamDrillConnection then
+		SpamDrillConnection:Disconnect()
+	end
+
+	if SpamRefineryConnection then
+		SpamRefineryConnection:Disconnect()
+	end
+
+	if SpamTotemConnection then
+		SpamTotemConnection:Disconnect()
+	end
+
+	IsFlying = false
+
+	if FlyThread then
+		task.cancel(FlyThread)
+	end
+
+	if NoClipConnection then
+		NoClipConnection:Disconnect()
+	end
+
+	if InfiniteJumpConnection then
+		InfiniteJumpConnection:Disconnect()
+	end
 
 	pcall(function()
 		local Character = LocalPlayer.Character
 		if Character then
 			local Humanoid = Character:FindFirstChildOfClass("Humanoid")
 			if Humanoid then
-				Humanoid.WalkSpeed = originalWalkspeed
-				Humanoid.JumpPower = originalJumpPower
+				Humanoid.WalkSpeed = OriginalWalkSpeed
+				Humanoid.JumpPower = OriginalJumpPower
 			end
-			for _, part in pairs(Character:GetDescendants()) do
-				if part:IsA("BasePart") then
-					part.CanCollide = true
-				end
+
+			for _, Part in Character:QueryDescendants("BasePart") do
+				Part.CanCollide = true
 			end
 		end
 	end)
@@ -1041,6 +1164,7 @@ Library:OnUnload(function()
 	print("Script Unloaded!")
 end)
 
+-- Theme & Save Manager
 ThemeManager:SetLibrary(Library)
 SaveManager:SetLibrary(Library)
 SaveManager:IgnoreThemeSettings()
@@ -1051,30 +1175,37 @@ SaveManager:BuildConfigSection(Tabs["UI Settings"])
 ThemeManager:ApplyToTab(Tabs["UI Settings"])
 SaveManager:LoadAutoloadConfig()
 
+-- Credits
+local ContributorsSource = game:HttpGet("https://raw.githubusercontent.com/cryp1t/Drift/refs/heads/main/Contributors.luau")
+local TeamMembers, GameContributors = loadstring(ContributorsSource)()
 
+local TeamGroup = Tabs.Credits:AddLeftGroupbox("Team", "wrench")
 
-local __ContribSrc = game:HttpGet("https://raw.githubusercontent.com/cryp1t/Drift/refs/heads/main/Contributors.luau")
-local __Team, __GameContribs = loadstring(__ContribSrc)()
-
-local __DevBox = Tabs.Cont:AddLeftGroupbox("Team", "wrench")
-for __name, __role in pairs(__Team) do
-    __DevBox:AddLabel("[<font color=\"rgb(255, 255, 100)\">" .. __name .. "</font>] " .. __role)
-end
-local __placeId = tostring(game.PlaceId)
-if __GameContribs[__placeId] then
-    local __ContBox = Tabs.Cont:AddRightGroupbox("Contributors", "users")
-    for __name, __contribution in pairs(__GameContribs[__placeId]) do
-        __ContBox:AddLabel("[<font color=\"rgb(255, 255, 100)\">" .. __name .. "</font>] " .. __contribution)
-    end
+for Name, Role in TeamMembers do
+	TeamGroup:AddLabel("[<font color=\"rgb(255, 255, 100)\">" .. Name .. "</font>] " .. Role)
 end
 
-wait(1)
+local PlaceId = tostring(game.PlaceId)
+
+if GameContributors[PlaceId] then
+	local ContributorsGroup = Tabs.Credits:AddRightGroupbox("Contributors", "users")
+
+	for Name, Contribution in GameContributors[PlaceId] do
+		ContributorsGroup:AddLabel("[<font color=\"rgb(255, 255, 100)\">" .. Name .. "</font>] " .. Contribution)
+	end
+end
+
+-- Loaded Notification
+task.wait(1)
+
 Library:Notify({
 	Title = "Drift",
 	Description = "Loaded Succesfully!",
 	Time = 5,
 })
+
 setclipboard("dsc.gg/getdrift")
+
 Library:Notify({
 	Title = "Drift",
 	Description = "Copied Discord Link",

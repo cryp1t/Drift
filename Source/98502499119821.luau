@@ -1,7 +1,10 @@
-local repo = "https://raw.githubusercontent.com/deividcomsono/Obsidian/main/"
-local Library = loadstring(game:HttpGet(repo .. "Library.lua"))()
+-- UI Setup
+local Repository = "https://raw.githubusercontent.com/deividcomsono/Obsidian/main/"
+local Library = loadstring(game:HttpGet(Repository .. "Library.lua"))()
 local ThemeManager = loadstring(game:HttpGet("https://pastefy.app/hOgTtQmZ/raw"))()
-local SaveManager = loadstring(game:HttpGet(repo .. "addons/SaveManager.lua"))()
+local SaveManager = loadstring(game:HttpGet(Repository .. "addons/SaveManager.lua"))()
+
+-- Services
 local Options = Library.Options
 local Toggles = Library.Toggles
 local Players = game:GetService("Players")
@@ -9,178 +12,194 @@ local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
-local TweenService = game:GetService("TweenService")
 local HttpService = game:GetService("HttpService")
 local TeleportService = game:GetService("TeleportService")
 local Lighting = game:GetService("Lighting")
-local lp = Players.LocalPlayer
-local cam = Workspace.CurrentCamera
+local LocalPlayer = Players.LocalPlayer
+local Camera = Workspace.CurrentCamera
 
-if getgenv().DriftActiveSession then
-    pcall(getgenv().DriftActiveSession)
+-- Global State
+local Environment = getgenv()
+
+if DriftActiveSession then
+    pcall(DriftActiveSession)
 end
 
-local sessionActive = true
-local eventLinks = {}
-local managedObjects = {}
+local IsSessionActive = true
+local EventLinks = {}
+local ManagedObjects = {}
+local RemoteHub = ReplicatedStorage:WaitForChild("Events", 10)
 
-local remoteHub = ReplicatedStorage:WaitForChild("Events", 10)
-
-local function hookEvent(signal, fn)
-    local c = signal:Connect(fn)
-    table.insert(eventLinks, c)
-    return c
+local function HookEvent(Signal, Handler)
+    local Connection = Signal:Connect(Handler)
+    table.insert(EventLinks, Connection)
+    return Connection
 end
 
-local function trackObject(obj)
-    table.insert(managedObjects, obj)
-    return obj
+local function TrackObject(Object)
+    table.insert(ManagedObjects, Object)
+    return Object
 end
 
-getgenv().DriftCfg = getgenv().DriftCfg or {
-    autoCast = false,
-    castFrequency = 1.0,
-    castIntensity = 100,
-    barLock = true,
-    slamBot = true,
-    chargeBot = true,
-    quickCatch = true,
-    skillBot = false,
-    activeSkill = "One-Strike Heaven Gate",
+-- Configuration
+local DefaultConfiguration = {
+    AutoCast = false,
+    CastFrequency = 1.0,
+    CastIntensity = 100,
+    BarLock = true,
+    SlamBot = true,
+    ChargeBot = true,
+    QuickCatch = true,
+    SkillBot = false,
+    ActiveSkill = "One-Strike Heaven Gate",
 
-    smartBait = false,
-    smartRod = false,
-    smartOrb = false,
-    preset1Rod = "Wooden Rod",
-    preset1Bait = "Basic Bait",
-    preset2Rod = "Wooden Rod",
-    preset2Bait = "Basic Bait",
+    SmartBait = false,
+    SmartRod = false,
+    SmartOrb = false,
+    Preset1Rod = "Wooden Rod",
+    Preset1Bait = "Basic Bait",
+    Preset2Rod = "Wooden Rod",
+    Preset2Bait = "Basic Bait",
 
-    liquidate = false,
-    liquidateTimer = 30,
-    shieldFish = false,
-    shieldTarget = "Colossal Tigerfish",
-    resourceMode = false,
+    Liquidate = false,
+    LiquidateTimer = 30,
+    ShieldFish = false,
+    ShieldTarget = "Colossal Tigerfish",
+    ResourceMode = false,
 
-    rhythmBot = false,
-    bossGrind = false,
-    secretBossGrind = false,
-    activeBoss = "Enzo",
+    RhythmBot = false,
+    BossGrind = false,
+    SecretBossGrind = false,
+    ActiveBoss = "Enzo",
 
-    spiritScan = false,
-    spiritPray = false,
-    hopSpirit = false,
-    hopMaoshan = false,
-    hopTaoist = false,
+    SpiritScan = false,
+    SpiritPray = false,
+    HopSpirit = false,
+    HopMaoshan = false,
+    HopTaoist = false,
 
-    ticketGrind = false,
-    ticketTier = "Easy",
-    dailyGrab = false,
-    dailyPause = 0.5,
+    TicketGrind = false,
+    TicketTier = "Easy",
+    DailyGrab = false,
+    DailyPause = 0.5,
 
-    baitForge = false,
-    forgeTarget = "Nameless Bait",
-    forgeQuantity = 1,
-    baitRestock = false,
-    restockTarget = "Ancestral Bait",
-    restockQuantity = 5,
-    restockFloor = 10,
-    restockPause = 1.0,
+    BaitForge = false,
+    ForgeTarget = "Nameless Bait",
+    ForgeQuantity = 1,
+    BaitRestock = false,
+    RestockTarget = "Ancestral Bait",
+    RestockQuantity = 5,
+    RestockFloor = 10,
+    RestockPause = 1.0,
 
-    bannerPull = false,
-    bannerChoice = "Taiji Banner",
-    pullBatch = 1,
+    BannerPull = false,
+    BannerChoice = "Taiji Banner",
+    PullBatch = 1,
 
-    speedHack = false,
-    speedAmount = 16,
-    flightMode = false,
-    flightVelocity = 50,
-    moonJump = false,
-    waterWalk = false,
-    phaseThrough = false,
+    SpeedHack = false,
+    SpeedAmount = 16,
+    FlightMode = false,
+    FlightVelocity = 50,
+    MoonJump = false,
+    WaterWalk = false,
+    PhaseThrough = false,
 
-    markerSpirit = false,
-    markerRod = false,
-    markerBoat = false,
-    markerMaoshan = false,
-    markerTaoist = false,
-    markerBoss = false,
-    markerPlayers = false,
-    hookRing = true,
-    clearFog = false,
-    maxBright = false,
-    lowGfx = false,
-    stripUi = false,
+    MarkerSpirit = false,
+    MarkerRod = false,
+    MarkerBoat = false,
+    MarkerMaoshan = false,
+    MarkerTaoist = false,
+    MarkerBoss = false,
+    MarkerPlayers = false,
+    HookRing = true,
+    ClearFog = false,
+    MaxBright = false,
+    LowGfx = false,
+    StripUi = false,
 
-    idleGuard = true,
-    reconnect = false,
+    IdleGuard = true,
+    Reconnect = false,
 }
 
-local cfg = getgenv().DriftCfg
+Environment.DriftCfg = Environment.DriftCfg or DefaultConfiguration
+local Configuration = DriftCfg
 
 if hookmetamethod and newcclosure then
-    local mgRemote = remoteHub and remoteHub:FindFirstChild("FishingMinigame")
+    local MinigameRemote = RemoteHub and RemoteHub:FindFirstChild("FishingMinigame")
     local originalCall
-    originalCall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
-        local method = getnamecallmethod()
-        if (self == mgRemote or (typeof(self) == "Instance" and self.Name == "FishingMinigame")) and method == "FireServer" and not checkcaller() then
-            if sessionActive and cfg and cfg.barLock then
-                local params = {...}
-                local action = tostring(params[1])
-                if action == "Out of bar" or action == "Out of bar (overpull)" or action:find("Out of bar") then
-                    return originalCall(self, "In bar", unpack(params, 2))
+    originalCall = hookmetamethod(game, "__namecall", newcclosure(function(Self, ...)
+        local Method = getnamecallmethod()
+        if (Self == MinigameRemote or (typeof(Self) == "Instance" and Self.Name == "FishingMinigame")) and Method == "FireServer" and not checkcaller() then
+            if IsSessionActive and Configuration and Configuration.BarLock then
+                local Args = {...}
+                local Action = tostring(Args[1])
+                if Action == "Out of bar" or Action == "Out of bar (overpull)" or Action:find("Out of bar") then
+                    return originalCall(Self, "In bar", unpack(Args, 2))
                 end
             end
         end
-        return originalCall(self, ...)
+        return originalCall(Self, ...)
     end))
 end
 
-local storageDir = "Drift/HeavyweightFishing"
+-- Storage
+local StorageDirectory = "Drift/HeavyweightFishing"
 
-local function ensureStorage()
+local function EnsureStorage()
     if makefolder then
         pcall(function()
-            if not isfolder("Drift") then makefolder("Drift") end
-            if not isfolder(storageDir) then makefolder(storageDir) end
+            if not isfolder("Drift") then
+                makefolder("Drift")
+            end
+            if not isfolder(StorageDirectory) then
+                makefolder(StorageDirectory)
+            end
         end)
     end
 end
 
-local function persistConfig(label)
-    ensureStorage()
-    local filepath = storageDir .. "/" .. (label or "default") .. ".json"
-    local payload = {}
-    for k, v in pairs(cfg) do
-        if typeof(v) == "EnumItem" then
-            payload[k] = {__enum = tostring(v)}
+local function PersistConfig(Label)
+    EnsureStorage()
+    local Filepath = StorageDirectory .. "/" .. (Label or "default") .. ".json"
+    local Payload = {}
+    for Key, Value in Configuration do
+        if typeof(Value) == "EnumItem" then
+            Payload[Key] = {__Enum = tostring(Value)}
         else
-            payload[k] = v
+            Payload[Key] = Value
         end
     end
-    local success, encoded = pcall(function() return HttpService:JSONEncode(payload) end)
-    if success and writefile then
-        pcall(function() writefile(filepath, encoded) end)
+    local Success, Encoded = pcall(function()
+        return HttpService:JSONEncode(Payload)
+    end)
+    if Success and writefile then
+        pcall(function()
+            writefile(Filepath, Encoded)
+        end)
         return true
     end
     return false
 end
 
-local function restoreConfig(label)
-    local filepath = storageDir .. "/" .. (label or "default") .. ".json"
+local function RestoreConfig(Label)
+    local Filepath = StorageDirectory .. "/" .. (Label or "default") .. ".json"
     if readfile then
-        local success, raw = pcall(function() return readfile(filepath) end)
-        if success and raw and #raw > 0 then
-            local parseOk, parsed = pcall(function() return HttpService:JSONDecode(raw) end)
-            if parseOk and type(parsed) == "table" then
-                for k, v in pairs(parsed) do
-                    if type(v) == "table" and v.__enum then
-                        local enumGroup, enumVal = v.__enum:match("Enum%.(%w+)%.(%w+)")
-                        if enumGroup and enumVal and Enum[enumGroup] and Enum[enumGroup][enumVal] then
-                            cfg[k] = Enum[enumGroup][enumVal]
+        local Success, Raw = pcall(function()
+            return readfile(Filepath)
+        end)
+        if Success and Raw and #Raw > 0 then
+            local ParseOk, Parsed = pcall(function()
+                return HttpService:JSONDecode(Raw)
+            end)
+            if ParseOk and type(Parsed) == "table" then
+                for Key, Value in Parsed do
+                    if type(Value) == "table" and Value.__Enum then
+                        local EnumGroup, EnumValue = Value.__Enum:match("Enum%.(%w+)%.(%w+)")
+                        if EnumGroup and EnumValue and Enum[EnumGroup] and Enum[EnumGroup][EnumValue] then
+                            Configuration[Key] = Enum[EnumGroup][EnumValue]
                         end
-                    elseif cfg[k] ~= nil then
-                        cfg[k] = v
+                    elseif Configuration[Key] ~= nil then
+                        Configuration[Key] = Value
                     end
                 end
                 return true
@@ -190,40 +209,43 @@ local function restoreConfig(label)
     return false
 end
 
-pcall(restoreConfig, "default")
+pcall(RestoreConfig, "default")
 
-local rodCatalog = {
-    {label = "Wooden Rod", cost = 0, str = 8, fortune = 1},
-    {label = "Bamboo Rod", cost = 100, str = 11, fortune = 5},
-    {label = "Iron Hook Rod", cost = 500, str = 13, fortune = 10},
-    {label = "Steel Rod", cost = 1000, str = 17, fortune = 11},
-    {label = "Enchanted Steel Rod", cost = 2000, str = 19, fortune = 12},
-    {label = "Alloy Rod", cost = 5000, str = 22, fortune = 5},
-    {label = "Emerald Rod", cost = 10000, str = 25, fortune = 10},
-    {label = "Bloodfire Rod", cost = 20000, str = 27, fortune = 10},
-    {label = "Shadow Rod", cost = 60000, str = 29, fortune = 22},
-    {label = "Triple Steel Rod", cost = 100000, str = 32, fortune = 20},
-    {label = "Golden Rod", cost = 200000, str = 35, fortune = 22},
-    {label = "Grandmaster Steel Rod", cost = 250000, str = 37, fortune = 10},
-    {label = "Grandmaster Golden Rod", cost = 1000000, str = 45, fortune = 30},
-    {label = "Steel Spine Rod", cost = 1500000, str = 48, fortune = 20},
-    {label = "Inferno Rod", cost = 1500000, str = 48, fortune = 18},
-    {label = "Golden Spine Rod", cost = 2000000, str = 51, fortune = 21},
-    {label = "Platinum Spine Rod", cost = 3000000, str = 54, fortune = 25},
-    {label = "Diamond Spine Rod", cost = 4000000, str = 56, fortune = 25},
-    {label = "Gravisteel Rod", cost = 5000000, str = 58, fortune = 15},
-    {label = "Auric Gravity Rod", cost = 6000000, str = 60, fortune = 10},
-    {label = "Inferno Gravity Rod", cost = 7000000, str = 62, fortune = 20},
-    {label = "Cryo Gravity Rod", cost = 8000000, str = 65, fortune = 36},
-    {label = "Thunder Thorn Rod", cost = 10000000, str = 67, fortune = 30},
-    {label = "Starlight Rod", cost = 60000000, str = 83, fortune = 15},
+-- Rod Catalog
+local RodCatalog = {
+    {Label = "Wooden Rod", Cost = 0, Strength = 8, Fortune = 1},
+    {Label = "Bamboo Rod", Cost = 100, Strength = 11, Fortune = 5},
+    {Label = "Iron Hook Rod", Cost = 500, Strength = 13, Fortune = 10},
+    {Label = "Steel Rod", Cost = 1000, Strength = 17, Fortune = 11},
+    {Label = "Enchanted Steel Rod", Cost = 2000, Strength = 19, Fortune = 12},
+    {Label = "Alloy Rod", Cost = 5000, Strength = 22, Fortune = 5},
+    {Label = "Emerald Rod", Cost = 10000, Strength = 25, Fortune = 10},
+    {Label = "Bloodfire Rod", Cost = 20000, Strength = 27, Fortune = 10},
+    {Label = "Shadow Rod", Cost = 60000, Strength = 29, Fortune = 22},
+    {Label = "Triple Steel Rod", Cost = 100000, Strength = 32, Fortune = 20},
+    {Label = "Golden Rod", Cost = 200000, Strength = 35, Fortune = 22},
+    {Label = "Grandmaster Steel Rod", Cost = 250000, Strength = 37, Fortune = 10},
+    {Label = "Grandmaster Golden Rod", Cost = 1000000, Strength = 45, Fortune = 30},
+    {Label = "Steel Spine Rod", Cost = 1500000, Strength = 48, Fortune = 20},
+    {Label = "Inferno Rod", Cost = 1500000, Strength = 48, Fortune = 18},
+    {Label = "Golden Spine Rod", Cost = 2000000, Strength = 51, Fortune = 21},
+    {Label = "Platinum Spine Rod", Cost = 3000000, Strength = 54, Fortune = 25},
+    {Label = "Diamond Spine Rod", Cost = 4000000, Strength = 56, Fortune = 25},
+    {Label = "Gravisteel Rod", Cost = 5000000, Strength = 58, Fortune = 15},
+    {Label = "Auric Gravity Rod", Cost = 6000000, Strength = 60, Fortune = 10},
+    {Label = "Inferno Gravity Rod", Cost = 7000000, Strength = 62, Fortune = 20},
+    {Label = "Cryo Gravity Rod", Cost = 8000000, Strength = 65, Fortune = 36},
+    {Label = "Thunder Thorn Rod", Cost = 10000000, Strength = 67, Fortune = 30},
+    {Label = "Starlight Rod", Cost = 60000000, Strength = 83, Fortune = 15},
 }
 
-local rodLabels = {}
-for _, r in ipairs(rodCatalog) do table.insert(rodLabels, r.label) end
-local baitOptions = {"Basic Bait", "Crude Mash Bait", "Corrupted Essence Bait", "Elite Bait", "Ancestral Bait", "Nameless Bait"}
+local RodLabels = {}
+for _, Rod in RodCatalog do
+    table.insert(RodLabels, Rod.Label)
+end
+local BaitOptions = {"Basic Bait", "Crude Mash Bait", "Corrupted Essence Bait", "Elite Bait", "Ancestral Bait", "Nameless Bait"}
 
-local forgeMaterials = {
+local ForgeMaterials = {
     ["Mountain Fish"] = true, ["Catfish"] = true, ["Crimson Catfish"] = true,
     ["Scarlet Fish"] = true, ["Elder Scarlet Fish"] = true, ["Octoparasitic Fish"] = true,
     ["Tiger Mirefish"] = true, ["Mirage Lanternfish"] = true, ["Golden Guardian Fish"] = true,
@@ -231,80 +253,82 @@ local forgeMaterials = {
     ["Sanguine Fish"] = true,
 }
 
-local islandWaypoints = {
-    {label = "Beginning Isle", coords = Vector3.new(-200.7, 11.1, 35.9)},
-    {label = "Bamboo Isle", coords = Vector3.new(-1223.0, 7.3, -24.1)},
-    {label = "Fallout Isle", coords = Vector3.new(65.5, 8.8, 1181.3)},
-    {label = "Sovereign Isle", coords = Vector3.new(-1276.4, 8.8, 1239.7)},
-    {label = "Perch Isle", coords = Vector3.new(-62.0, 11.9, -1321.4)},
-    {label = "Frost Isle", coords = Vector3.new(-1366.0, 11.9, -1495.4)},
-    {label = "Coconut Isle", coords = Vector3.new(1493.6, 9.1, -1430.6)},
-    {label = "Amber Isle", coords = Vector3.new(1259.4, 9.1, 1401.5)},
-    {label = "Battlefield Isle", coords = Vector3.new(1393.5, 11.3, 169.6)},
-    {label = "Mistpeak Isle", coords = Vector3.new(2660.2, 8.8, -86.7)},
+-- Waypoints
+local IslandWaypoints = {
+    {Label = "Beginning Isle", Coords = Vector3.new(-200.7, 11.1, 35.9)},
+    {Label = "Bamboo Isle", Coords = Vector3.new(-1223.0, 7.3, -24.1)},
+    {Label = "Fallout Isle", Coords = Vector3.new(65.5, 8.8, 1181.3)},
+    {Label = "Sovereign Isle", Coords = Vector3.new(-1276.4, 8.8, 1239.7)},
+    {Label = "Perch Isle", Coords = Vector3.new(-62.0, 11.9, -1321.4)},
+    {Label = "Frost Isle", Coords = Vector3.new(-1366.0, 11.9, -1495.4)},
+    {Label = "Coconut Isle", Coords = Vector3.new(1493.6, 9.1, -1430.6)},
+    {Label = "Amber Isle", Coords = Vector3.new(1259.4, 9.1, 1401.5)},
+    {Label = "Battlefield Isle", Coords = Vector3.new(1393.5, 11.3, 169.6)},
+    {Label = "Mistpeak Isle", Coords = Vector3.new(2660.2, 8.8, -86.7)},
 }
 
-local arenaWaypoints = {
-    {label = "Octoparasite Buoy", coords = Vector3.new(1608.2, 5.0, -218.3)},
-    {label = "Underground Fisher", coords = Vector3.new(112.5, -330.0, -30.8)},
-    {label = "Enzo Arena", coords = Vector3.new(-115.3, 9.2, 1349.5)},
+local ArenaWaypoints = {
+    {Label = "Octoparasite Buoy", Coords = Vector3.new(1608.2, 5.0, -218.3)},
+    {Label = "Underground Fisher", Coords = Vector3.new(112.5, -330.0, -30.8)},
+    {Label = "Enzo Arena", Coords = Vector3.new(-115.3, 9.2, 1349.5)},
 }
 
-local dealerWaypoints = {
-    {label = "Beginning Dealer", coords = Vector3.new(-151.4, 8.7, -49.9)},
-    {label = "Bamboo Dealer", coords = Vector3.new(-1236.8, 7.3, -174.1)},
-    {label = "Fallout Dealer", coords = Vector3.new(138.4, 9.0, 1179.7)},
-    {label = "Sovereign Dealer", coords = Vector3.new(-1262.6, 8.2, 1202.2)},
-    {label = "Perch Dealer", coords = Vector3.new(-9.5, 9.2, -1330.0)},
-    {label = "Frost Dealer", coords = Vector3.new(-1400.4, 9.2, -1490.6)},
-    {label = "Coconut Dealer", coords = Vector3.new(1446.0, 9.3, -1408.0)},
-    {label = "Amber Dealer", coords = Vector3.new(1292.7, 8.2, 1497.4)},
+local DealerWaypoints = {
+    {Label = "Beginning Dealer", Coords = Vector3.new(-151.4, 8.7, -49.9)},
+    {Label = "Bamboo Dealer", Coords = Vector3.new(-1236.8, 7.3, -174.1)},
+    {Label = "Fallout Dealer", Coords = Vector3.new(138.4, 9.0, 1179.7)},
+    {Label = "Sovereign Dealer", Coords = Vector3.new(-1262.6, 8.2, 1202.2)},
+    {Label = "Perch Dealer", Coords = Vector3.new(-9.5, 9.2, -1330.0)},
+    {Label = "Frost Dealer", Coords = Vector3.new(-1400.4, 9.2, -1490.6)},
+    {Label = "Coconut Dealer", Coords = Vector3.new(1446.0, 9.3, -1408.0)},
+    {Label = "Amber Dealer", Coords = Vector3.new(1292.7, 8.2, 1497.4)},
 }
 
-local hiddenRodWaypoints = {
-    {label = "Anchorbound Rod", coords = Vector3.new(-1208.5, 56.3, 1646.2)},
-    {label = "Blazeshark Rod", coords = Vector3.new(-8.4, 53.9, 6.7)},
-    {label = "Kraken Rod", coords = Vector3.new(1543.8, 73.4, 1490.9)},
-    {label = "Ascendant Bamboo Rod", coords = Vector3.new(-1360.6, 140.6, 31.0)},
-    {label = "Lifebloom Rod", coords = Vector3.new(-114.9, 74.9, -1533.2)},
-    {label = "Demonic Rod", coords = Vector3.new(1181.9, 82.9, -1243.8)},
+local HiddenRodWaypoints = {
+    {Label = "Anchorbound Rod", Coords = Vector3.new(-1208.5, 56.3, 1646.2)},
+    {Label = "Blazeshark Rod", Coords = Vector3.new(-8.4, 53.9, 6.7)},
+    {Label = "Kraken Rod", Coords = Vector3.new(1543.8, 73.4, 1490.9)},
+    {Label = "Ascendant Bamboo Rod", Coords = Vector3.new(-1360.6, 140.6, 31.0)},
+    {Label = "Lifebloom Rod", Coords = Vector3.new(-114.9, 74.9, -1533.2)},
+    {Label = "Demonic Rod", Coords = Vector3.new(1181.9, 82.9, -1243.8)},
 }
 
-local function getRoot()
-    local ch = lp.Character
-    return ch and ch:FindFirstChild("HumanoidRootPart")
+-- Helper Functions
+local function GetRoot()
+    local Character = LocalPlayer.Character
+    return Character and Character:FindFirstChild("HumanoidRootPart")
 end
 
-local function warpTo(pos)
-    local r = getRoot()
-    if r then
-        r.CFrame = CFrame.new(pos + Vector3.new(0, 3, 0))
+local function WarpTo(Position)
+    local Root = GetRoot()
+    if Root then
+        Root.CFrame = CFrame.new(Position + Vector3.new(0, 3, 0))
         return true
     end
     return false
 end
 
-local function activatePrompt(prompt)
+local function ActivatePrompt(Prompt)
     if fireproximityprompt then
-        fireproximityprompt(prompt)
+        fireproximityprompt(Prompt)
     else
         pcall(function()
-            prompt:InputHoldBegin()
-            task.wait(prompt.HoldDuration + 0.05)
-            prompt:InputHoldEnd()
+            Prompt:InputHoldBegin()
+            task.wait(Prompt.HoldDuration + 0.05)
+            Prompt:InputHoldEnd()
         end)
     end
 end
 
-local function jumpServer()
+local function ServerHop()
     pcall(function()
-        local pid = game.PlaceId
-        local endpoint = "https://games.roblox.com/v1/games/" .. pid .. "/servers/Public?sortOrder=Desc&limit=100"
-        local body = HttpService:JSONDecode(game:HttpGet(endpoint))
-        if body and body.data then
-            for _, srv in ipairs(body.data) do
-                if srv.playing < srv.maxPlayers and srv.id ~= game.JobId then
-                    TeleportService:TeleportToPlaceInstance(pid, srv.id, lp)
+        local PlaceId = game.PlaceId
+        local Endpoint = "https://games.roblox.com/v1/games/" .. PlaceId .. "/servers/Public?sortOrder=Desc&limit=100"
+        local Body = HttpService:JSONDecode(game:HttpGet(Endpoint))
+        if Body and Body.data then
+            for _, Server in Body.data do
+                if Server.playing < Server.maxPlayers and Server.id ~= game.JobId then
+                    TeleportService:TeleportToPlaceInstance(PlaceId, Server.id, LocalPlayer)
                     return
                 end
             end
@@ -312,36 +336,42 @@ local function jumpServer()
     end)
 end
 
-local function equipPreset(rodName, baitName, presetLabel)
-    local accountData = ReplicatedStorage:FindFirstChild("Data") and ReplicatedStorage.Data:FindFirstChild(lp.UserId)
-    if accountData then
-        local rodSlot = accountData.FishingRodInventory:FindFirstChild(rodName)
-        local owned = rodSlot and rodSlot:FindFirstChild("Owned") and rodSlot.Owned.Value == true
-        if owned then
-            if remoteHub:FindFirstChild("EquipFishingRod") then remoteHub.EquipFishingRod:InvokeServer(rodName) end
-            Library:Notify({Title = "Drift", Description = "Equipped rod: " .. rodName, Time = 3})
-        else
-            Library:Notify({Title = "Drift", Description = "You do not own " .. rodName, Time = 3})
+local function EquipPreset(RodName, BaitName, PresetLabel)
+    local AccountData = ReplicatedStorage:FindFirstChild("Data") and ReplicatedStorage.Data:FindFirstChild(LocalPlayer.UserId)
+    if not AccountData then
+        return
+    end
+    local RodSlot = AccountData.FishingRodInventory:FindFirstChild(RodName)
+    local Owned = RodSlot and RodSlot:FindFirstChild("Owned") and RodSlot.Owned.Value == true
+    if Owned then
+        if RemoteHub:FindFirstChild("EquipFishingRod") then
+            RemoteHub.EquipFishingRod:InvokeServer(RodName)
         end
-        local baitSlot = accountData.Bait:FindFirstChild(baitName)
-        if baitSlot and baitSlot.Value > 0 then
-            if remoteHub:FindFirstChild("EquipBait") then remoteHub.EquipBait:InvokeServer(baitName) end
-            Library:Notify({Title = "Drift", Description = "Equipped bait: " .. baitName, Time = 3})
-        else
-            Library:Notify({Title = "Drift", Description = "No " .. baitName .. " in inventory", Time = 3})
+        Library:Notify({Title = "Drift", Description = "Equipped rod: " .. RodName, Time = 3})
+    else
+        Library:Notify({Title = "Drift", Description = "You do not own " .. RodName, Time = 3})
+    end
+    local BaitSlot = AccountData.Bait:FindFirstChild(BaitName)
+    if BaitSlot and BaitSlot.Value > 0 then
+        if RemoteHub:FindFirstChild("EquipBait") then
+            RemoteHub.EquipBait:InvokeServer(BaitName)
         end
+        Library:Notify({Title = "Drift", Description = "Equipped bait: " .. BaitName, Time = 3})
+    else
+        Library:Notify({Title = "Drift", Description = "No " .. BaitName .. " in inventory", Time = 3})
     end
 end
 
 Library.ShowToggleFrameInKeybinds = true
 
+-- Window & Tabs
 local Window = Library:CreateWindow({
-	Title = "Drift",
-	Footer = "Heavyweight Fishing",
-	Icon = 106251220512678,
-	NotifySide = "Right",
-	ShowCustomCursor = true,
-	AutoShow = true,
+    Title = "Drift",
+    Footer = "Heavyweight Fishing",
+    Icon = 106251220512678,
+    NotifySide = "Right",
+    ShowCustomCursor = true,
+    AutoShow = true,
     SidebarCompacted = true,
     DisableSearch = true,
     Animations = { TabSwitch = true },
@@ -363,73 +393,75 @@ Tabs.Fishing:UpdateWarningBox({
     Visible = true,
     LockSize = true,
 })
+
+-- Fishing
 local CoreBox = Tabs.Fishing:AddGroupbox({
     Side = "Left",
     Name = "Reel",
     IconName = "zap",
 })
 
-CoreBox:AddToggle("autoCast", {
+CoreBox:AddToggle("AutoCast", {
     Text = "Auto Cast",
-    Default = cfg.autoCast,
+    Default = Configuration.AutoCast,
     Tooltip = "Casts rod automatically",
 })
 
-Toggles.autoCast:OnChanged(function()
-    cfg.autoCast = Toggles.autoCast.Value
+Toggles.AutoCast:OnChanged(function()
+    Configuration.AutoCast = Toggles.AutoCast.Value
 end)
 
-CoreBox:AddSlider("castFrequency", {
+CoreBox:AddSlider("CastFrequency", {
     Text = "Cast Delay",
-    Default = cfg.castFrequency,
+    Default = Configuration.CastFrequency,
     Min = 0.5,
     Max = 5.0,
     Rounding = 2,
     Suffix = "s",
 })
 
-Options.castFrequency:OnChanged(function()
-    cfg.castFrequency = Options.castFrequency.Value
+Options.CastFrequency:OnChanged(function()
+    Configuration.CastFrequency = Options.CastFrequency.Value
 end)
 
-CoreBox:AddToggle("barLock", {
+CoreBox:AddToggle("BarLock", {
     Text = "Anchor Bar",
-    Default = cfg.barLock,
+    Default = Configuration.BarLock,
     Tooltip = "Locks minigame bar center",
 })
 
-Toggles.barLock:OnChanged(function()
-    cfg.barLock = Toggles.barLock.Value
+Toggles.BarLock:OnChanged(function()
+    Configuration.BarLock = Toggles.BarLock.Value
 end)
 
-CoreBox:AddToggle("skillBot", {
+CoreBox:AddToggle("SkillBot", {
     Text = "Auto Skills",
-    Default = cfg.skillBot,
+    Default = Configuration.SkillBot,
     Tooltip = "Uses skills while reeling",
 })
 
-Toggles.skillBot:OnChanged(function()
-    cfg.skillBot = Toggles.skillBot.Value
+Toggles.SkillBot:OnChanged(function()
+    Configuration.SkillBot = Toggles.SkillBot.Value
 end)
 
-CoreBox:AddToggle("slamBot", {
+CoreBox:AddToggle("SlamBot", {
     Text = "Auto Slam",
-    Default = cfg.slamBot,
+    Default = Configuration.SlamBot,
     Tooltip = "Clicks slam on prompt",
 })
 
-Toggles.slamBot:OnChanged(function()
-    cfg.slamBot = Toggles.slamBot.Value
+Toggles.SlamBot:OnChanged(function()
+    Configuration.SlamBot = Toggles.SlamBot.Value
 end)
 
-CoreBox:AddToggle("chargeBot", {
+CoreBox:AddToggle("ChargeBot", {
     Text = "Auto Charge",
-    Default = cfg.chargeBot,
+    Default = Configuration.ChargeBot,
     Tooltip = "Charges durability automatically",
 })
 
-Toggles.chargeBot:OnChanged(function()
-    cfg.chargeBot = Toggles.chargeBot.Value
+Toggles.ChargeBot:OnChanged(function()
+    Configuration.ChargeBot = Toggles.ChargeBot.Value
 end)
 
 local EconomyBox = Tabs.Fishing:AddGroupbox({
@@ -438,38 +470,38 @@ local EconomyBox = Tabs.Fishing:AddGroupbox({
     IconName = "coins",
 })
 
-EconomyBox:AddToggle("liquidate", {
+EconomyBox:AddToggle("Liquidate", {
     Text = "Auto Sell Fish",
-    Default = cfg.liquidate,
+    Default = Configuration.Liquidate,
     Tooltip = "Sells fish periodically",
 })
 
-Toggles.liquidate:OnChanged(function()
-    cfg.liquidate = Toggles.liquidate.Value
+Toggles.Liquidate:OnChanged(function()
+    Configuration.Liquidate = Toggles.Liquidate.Value
 end)
 
-EconomyBox:AddSlider("liquidateTimer", {
+EconomyBox:AddSlider("LiquidateTimer", {
     Text = "Sell Interval",
-    Default = cfg.liquidateTimer,
+    Default = Configuration.LiquidateTimer,
     Min = 10,
     Max = 300,
     Rounding = 0,
     Suffix = "s",
 })
 
-Options.liquidateTimer:OnChanged(function()
-    cfg.liquidateTimer = Options.liquidateTimer.Value
+Options.LiquidateTimer:OnChanged(function()
+    Configuration.LiquidateTimer = Options.LiquidateTimer.Value
 end)
 
 EconomyBox:AddButton({
     Text = "Sell Now",
     Func = function()
-        local r = getRoot()
-        if r then
-            r.CFrame = CFrame.new(-203.5, 7.3, 107.1)
+        local Root = GetRoot()
+        if Root then
+            Root.CFrame = CFrame.new(-203.5, 7.3, 107.1)
             task.wait(0.3)
-            if remoteHub and remoteHub:FindFirstChild("SellFish") then
-                remoteHub.SellFish:FireServer("All")
+            if RemoteHub and RemoteHub:FindFirstChild("SellFish") then
+                RemoteHub.SellFish:FireServer("All")
                 Library:Notify({Title = "Drift", Description = "Sold all fish to Nana", Time = 3})
             end
         end
@@ -479,73 +511,74 @@ EconomyBox:AddButton({
 
 EconomyBox:AddDivider()
 
-EconomyBox:AddToggle("shieldFish", {
+EconomyBox:AddToggle("ShieldFish", {
     Text = "Protect Fish",
-    Default = cfg.shieldFish,
+    Default = Configuration.ShieldFish,
     Tooltip = "Favourites chosen fish type",
 })
 
-Toggles.shieldFish:OnChanged(function()
-    cfg.shieldFish = Toggles.shieldFish.Value
+Toggles.ShieldFish:OnChanged(function()
+    Configuration.ShieldFish = Toggles.ShieldFish.Value
 end)
 
-local protectedFishList = {"Colossal Tigerfish", "Heavenpiercer Turtle", "Golden Guardian Fish", "Crimson Electric Eel", "Frost Kingfish", "Ascended Perch", "Primordial Kunfish Overlord", "Warbringer Shark", "Mountain Fish", "Tiger Mirefish", "Mirage Lanternfish", "Octoparasitic Fish"}
+local ProtectedFishList = {"Colossal Tigerfish", "Heavenpiercer Turtle", "Golden Guardian Fish", "Crimson Electric Eel", "Frost Kingfish", "Ascended Perch", "Primordial Kunfish Overlord", "Warbringer Shark", "Mountain Fish", "Tiger Mirefish", "Mirage Lanternfish", "Octoparasitic Fish"}
 
-EconomyBox:AddDropdown("shieldTarget", {
-    Values = protectedFishList,
-    Default = cfg.shieldTarget,
+EconomyBox:AddDropdown("ShieldTarget", {
+    Values = ProtectedFishList,
+    Default = Configuration.ShieldTarget,
     Text = "Protected Fish",
     Tooltip = "Fish to favourite",
 })
 
-Options.shieldTarget:OnChanged(function()
-    cfg.shieldTarget = Options.shieldTarget.Value
+Options.ShieldTarget:OnChanged(function()
+    Configuration.ShieldTarget = Options.ShieldTarget.Value
 end)
 
-EconomyBox:AddToggle("resourceMode", {
+EconomyBox:AddToggle("ResourceMode", {
     Text = "Material Farming",
-    Default = cfg.resourceMode,
+    Default = Configuration.ResourceMode,
     Tooltip = "Protects crafting materials",
 })
 
-Toggles.resourceMode:OnChanged(function()
-    cfg.resourceMode = Toggles.resourceMode.Value
+Toggles.ResourceMode:OnChanged(function()
+    Configuration.ResourceMode = Toggles.ResourceMode.Value
 end)
 
+-- Equipment
 local SmartEquipBox = Tabs.Equipment:AddGroupbox({
     Side = "Left",
     Name = "Smart Equip",
     IconName = "sparkles",
 })
 
-SmartEquipBox:AddToggle("smartBait", {
+SmartEquipBox:AddToggle("SmartBait", {
     Text = "Best Bait",
-    Default = cfg.smartBait,
+    Default = Configuration.SmartBait,
     Tooltip = "Equips highest luck bait",
 })
 
-Toggles.smartBait:OnChanged(function()
-    cfg.smartBait = Toggles.smartBait.Value
+Toggles.SmartBait:OnChanged(function()
+    Configuration.SmartBait = Toggles.SmartBait.Value
 end)
 
-SmartEquipBox:AddToggle("smartRod", {
+SmartEquipBox:AddToggle("SmartRod", {
     Text = "Best Rod",
-    Default = cfg.smartRod,
+    Default = Configuration.SmartRod,
     Tooltip = "Equips strongest owned rod",
 })
 
-Toggles.smartRod:OnChanged(function()
-    cfg.smartRod = Toggles.smartRod.Value
+Toggles.SmartRod:OnChanged(function()
+    Configuration.SmartRod = Toggles.SmartRod.Value
 end)
 
-SmartEquipBox:AddToggle("smartOrb", {
+SmartEquipBox:AddToggle("SmartOrb", {
     Text = "Best Orb",
-    Default = cfg.smartOrb,
+    Default = Configuration.SmartOrb,
     Tooltip = "Equips top essence orb",
 })
 
-Toggles.smartOrb:OnChanged(function()
-    cfg.smartOrb = Toggles.smartOrb.Value
+Toggles.SmartOrb:OnChanged(function()
+    Configuration.SmartOrb = Toggles.SmartOrb.Value
 end)
 
 local PresetBox = Tabs.Equipment:AddGroupbox({
@@ -554,96 +587,97 @@ local PresetBox = Tabs.Equipment:AddGroupbox({
     IconName = "layers",
 })
 
-PresetBox:AddDropdown("preset1Rod", {
-    Values = rodLabels,
-    Default = cfg.preset1Rod,
+PresetBox:AddDropdown("Preset1Rod", {
+    Values = RodLabels,
+    Default = Configuration.Preset1Rod,
     Text = "Preset 1 Rod",
 })
 
-Options.preset1Rod:OnChanged(function()
-    cfg.preset1Rod = Options.preset1Rod.Value
+Options.Preset1Rod:OnChanged(function()
+    Configuration.Preset1Rod = Options.Preset1Rod.Value
 end)
 
-PresetBox:AddDropdown("preset1Bait", {
-    Values = baitOptions,
-    Default = cfg.preset1Bait,
+PresetBox:AddDropdown("Preset1Bait", {
+    Values = BaitOptions,
+    Default = Configuration.Preset1Bait,
     Text = "Preset 1 Bait",
 })
 
-Options.preset1Bait:OnChanged(function()
-    cfg.preset1Bait = Options.preset1Bait.Value
+Options.Preset1Bait:OnChanged(function()
+    Configuration.Preset1Bait = Options.Preset1Bait.Value
 end)
 
 PresetBox:AddButton({
     Text = "Equip Preset 1",
     Func = function()
-        equipPreset(cfg.preset1Rod, cfg.preset1Bait, "1")
+        EquipPreset(Configuration.Preset1Rod, Configuration.Preset1Bait, "1")
     end,
 })
 
 PresetBox:AddDivider()
 
-PresetBox:AddDropdown("preset2Rod", {
-    Values = rodLabels,
-    Default = cfg.preset2Rod,
+PresetBox:AddDropdown("Preset2Rod", {
+    Values = RodLabels,
+    Default = Configuration.Preset2Rod,
     Text = "Preset 2 Rod",
 })
 
-Options.preset2Rod:OnChanged(function()
-    cfg.preset2Rod = Options.preset2Rod.Value
+Options.Preset2Rod:OnChanged(function()
+    Configuration.Preset2Rod = Options.Preset2Rod.Value
 end)
 
-PresetBox:AddDropdown("preset2Bait", {
-    Values = baitOptions,
-    Default = cfg.preset2Bait,
+PresetBox:AddDropdown("Preset2Bait", {
+    Values = BaitOptions,
+    Default = Configuration.Preset2Bait,
     Text = "Preset 2 Bait",
 })
 
-Options.preset2Bait:OnChanged(function()
-    cfg.preset2Bait = Options.preset2Bait.Value
+Options.Preset2Bait:OnChanged(function()
+    Configuration.Preset2Bait = Options.Preset2Bait.Value
 end)
 
 PresetBox:AddButton({
     Text = "Equip Preset 2",
     Func = function()
-        equipPreset(cfg.preset2Rod, cfg.preset2Bait, "2")
+        EquipPreset(Configuration.Preset2Rod, Configuration.Preset2Bait, "2")
     end,
 })
 
+-- Bosses
 local BossBox = Tabs.Fishing:AddGroupbox({
     Side = "Left",
     Name = "Bosses",
     IconName = "skull",
 })
 
-BossBox:AddToggle("rhythmBot", {
+BossBox:AddToggle("RhythmBot", {
     Text = "Octo Rhythm Bot",
-    Default = cfg.rhythmBot,
+    Default = Configuration.RhythmBot,
     Tooltip = "Perfect rhythm timing",
 })
 
-Toggles.rhythmBot:OnChanged(function()
-    cfg.rhythmBot = Toggles.rhythmBot.Value
+Toggles.RhythmBot:OnChanged(function()
+    Configuration.RhythmBot = Toggles.RhythmBot.Value
 end)
 
-BossBox:AddToggle("bossGrind", {
+BossBox:AddToggle("BossGrind", {
     Text = "Auto Farm Enzo",
-    Default = cfg.bossGrind,
+    Default = Configuration.BossGrind,
     Tooltip = "Summons and defeats Enzo",
 })
 
-Toggles.bossGrind:OnChanged(function()
-    cfg.bossGrind = Toggles.bossGrind.Value
+Toggles.BossGrind:OnChanged(function()
+    Configuration.BossGrind = Toggles.BossGrind.Value
 end)
 
-BossBox:AddToggle("secretBossGrind", {
+BossBox:AddToggle("SecretBossGrind", {
     Text = "Auto Secret Boss",
-    Default = cfg.secretBossGrind,
+    Default = Configuration.SecretBossGrind,
     Tooltip = "Crafts bait, summons, kills",
 })
 
-Toggles.secretBossGrind:OnChanged(function()
-    cfg.secretBossGrind = Toggles.secretBossGrind.Value
+Toggles.SecretBossGrind:OnChanged(function()
+    Configuration.SecretBossGrind = Toggles.SecretBossGrind.Value
 end)
 
 BossBox:AddDivider()
@@ -651,7 +685,7 @@ BossBox:AddDivider()
 BossBox:AddButton({
     Text = "Teleport to Octoparasite",
     Func = function()
-        if warpTo(Vector3.new(1608.2, 5.0, -218.3)) then
+        if WarpTo(Vector3.new(1608.2, 5.0, -218.3)) then
             Library:Notify({Title = "Drift", Description = "Arrived at ocean boss buoy", Time = 3})
         end
     end,
@@ -660,7 +694,7 @@ BossBox:AddButton({
 BossBox:AddButton({
     Text = "Teleport to Enzo",
     Func = function()
-        if warpTo(Vector3.new(-115.3, 9.2, 1349.5)) then
+        if WarpTo(Vector3.new(-115.3, 9.2, 1349.5)) then
             Library:Notify({Title = "Drift", Description = "Arrived at Enzo arena", Time = 3})
         end
     end,
@@ -669,7 +703,7 @@ BossBox:AddButton({
 BossBox:AddButton({
     Text = "Teleport to Fisher Realm",
     Func = function()
-        if warpTo(Vector3.new(112.5, -330.0, -30.8)) then
+        if WarpTo(Vector3.new(112.5, -330.0, -30.8)) then
             Library:Notify({Title = "Drift", Description = "Arrived at underground realm", Time = 3})
         end
     end,
@@ -684,13 +718,13 @@ local SpiritBox = Tabs.Fishing:AddGroupbox({
 SpiritBox:AddButton({
     Text = "Check Spirit Status",
     Func = function()
-        local accountData = ReplicatedStorage:FindFirstChild("Data") and ReplicatedStorage.Data:FindFirstChild(lp.UserId)
-        if accountData and accountData:FindFirstChild("GodSpirit") then
-            local y = accountData.GodSpirit:FindFirstChild("Yellow") and accountData.GodSpirit.Yellow.Value or false
-            local b = accountData.GodSpirit:FindFirstChild("Blue") and accountData.GodSpirit.Blue.Value or false
-            local g = accountData.GodSpirit:FindFirstChild("Green") and accountData.GodSpirit.Green.Value or false
-            local msg = string.format("Yellow: %s | Blue: %s | Green: %s", y and "Active" or "Off", b and "Active" or "Off", g and "Active" or "Off")
-            Library:Notify({Title = "Drift", Description = msg, Time = 5})
+        local AccountData = ReplicatedStorage:FindFirstChild("Data") and ReplicatedStorage.Data:FindFirstChild(LocalPlayer.UserId)
+        if AccountData and AccountData:FindFirstChild("GodSpirit") then
+            local IsYellow = AccountData.GodSpirit:FindFirstChild("Yellow") and AccountData.GodSpirit.Yellow.Value or false
+            local IsBlue = AccountData.GodSpirit:FindFirstChild("Blue") and AccountData.GodSpirit.Blue.Value or false
+            local IsGreen = AccountData.GodSpirit:FindFirstChild("Green") and AccountData.GodSpirit.Green.Value or false
+            local Message = string.format("Yellow: %s | Blue: %s | Green: %s", IsYellow and "Active" or "Off", IsBlue and "Active" or "Off", IsGreen and "Active" or "Off")
+            Library:Notify({Title = "Drift", Description = Message, Time = 5})
         else
             Library:Notify({Title = "Drift", Description = "Could not read spirit data", Time = 3})
         end
@@ -698,28 +732,28 @@ SpiritBox:AddButton({
     Tooltip = "Shows blessing status",
 })
 
-SpiritBox:AddToggle("spiritPray", {
+SpiritBox:AddToggle("SpiritPray", {
     Text = "Auto Pray",
-    Default = cfg.spiritPray,
+    Default = Configuration.SpiritPray,
     Tooltip = "Prays at altar nearby",
 })
 
-Toggles.spiritPray:OnChanged(function()
-    cfg.spiritPray = Toggles.spiritPray.Value
+Toggles.SpiritPray:OnChanged(function()
+    Configuration.SpiritPray = Toggles.SpiritPray.Value
 end)
 
 SpiritBox:AddButton({
     Text = "Teleport to Altar",
     Func = function()
-        local spirit = (Workspace:FindFirstChild("NPC") and Workspace.NPC:FindFirstChild("Spirit")) or (Workspace:FindFirstChild("NPC") and Workspace.NPC:FindFirstChild("God"))
-        if spirit then
-            local r = getRoot()
-            if r then
-                r.CFrame = spirit:GetPivot() + Vector3.new(0, 3, 5)
+        local Spirit = (Workspace:FindFirstChild("NPC") and Workspace.NPC:FindFirstChild("Spirit")) or (Workspace:FindFirstChild("NPC") and Workspace.NPC:FindFirstChild("God"))
+        if Spirit then
+            local Root = GetRoot()
+            if Root then
+                Root.CFrame = Spirit:GetPivot() + Vector3.new(0, 3, 5)
                 Library:Notify({Title = "Drift", Description = "Arrived at spirit altar", Time = 3})
             end
         else
-            if warpTo(Vector3.new(1245.7, 19.3, -133.4)) then
+            if WarpTo(Vector3.new(1245.7, 19.3, -133.4)) then
                 Library:Notify({Title = "Drift", Description = "Warped to shrine location", Time = 3})
             end
         end
@@ -729,16 +763,18 @@ SpiritBox:AddButton({
 SpiritBox:AddButton({
     Text = "Pray Now",
     Func = function()
-        local sp = (Workspace:FindFirstChild("NPC") and Workspace.NPC:FindFirstChild("Spirit")) or (Workspace:FindFirstChild("NPC") and Workspace.NPC:FindFirstChild("God"))
-        if sp then
-            local triggered = false
-            for _, d in ipairs(sp:GetDescendants()) do
-                if d:IsA("ProximityPrompt") then
-                    activatePrompt(d)
-                    triggered = true
-                end
+        local Spirit = (Workspace:FindFirstChild("NPC") and Workspace.NPC:FindFirstChild("Spirit")) or (Workspace:FindFirstChild("NPC") and Workspace.NPC:FindFirstChild("God"))
+        if Spirit then
+            local WasTriggered = false
+            for _, Descendant in Spirit:QueryDescendants("ProximityPrompt") do
+                ActivatePrompt(Descendant)
+                WasTriggered = true
             end
-            Library:Notify({Title = "Drift", Description = triggered and "Prayed at altar" or "No prompt found", Time = 3})
+            if WasTriggered then
+                Library:Notify({Title = "Drift", Description = "Prayed at altar", Time = 3})
+            else
+                Library:Notify({Title = "Drift", Description = "No prompt found", Time = 3})
+            end
         else
             Library:Notify({Title = "Drift", Description = "Spirit not spawned here", Time = 3})
         end
@@ -747,75 +783,76 @@ SpiritBox:AddButton({
 
 SpiritBox:AddDivider()
 
-SpiritBox:AddToggle("hopSpirit", {
+SpiritBox:AddToggle("HopSpirit", {
     Text = "Hop for Spirit",
-    Default = cfg.hopSpirit,
+    Default = Configuration.HopSpirit,
     Tooltip = "Hops until spirit found",
 })
 
-Toggles.hopSpirit:OnChanged(function()
-    cfg.hopSpirit = Toggles.hopSpirit.Value
+Toggles.HopSpirit:OnChanged(function()
+    Configuration.HopSpirit = Toggles.HopSpirit.Value
 end)
 
-SpiritBox:AddToggle("hopMaoshan", {
+SpiritBox:AddToggle("HopMaoshan", {
     Text = "Hop for Maoshan",
-    Default = cfg.hopMaoshan,
+    Default = Configuration.HopMaoshan,
     Tooltip = "Hops until Maoshan found",
 })
 
-Toggles.hopMaoshan:OnChanged(function()
-    cfg.hopMaoshan = Toggles.hopMaoshan.Value
+Toggles.HopMaoshan:OnChanged(function()
+    Configuration.HopMaoshan = Toggles.HopMaoshan.Value
 end)
 
-SpiritBox:AddToggle("hopTaoist", {
+SpiritBox:AddToggle("HopTaoist", {
     Text = "Hop for Taoist",
-    Default = cfg.hopTaoist,
+    Default = Configuration.HopTaoist,
     Tooltip = "Hops until Taoist found",
 })
 
-Toggles.hopTaoist:OnChanged(function()
-    cfg.hopTaoist = Toggles.hopTaoist.Value
+Toggles.HopTaoist:OnChanged(function()
+    Configuration.HopTaoist = Toggles.HopTaoist.Value
 end)
 
 SpiritBox:AddButton({
     Text = "Server Hop Now",
     Func = function()
         Library:Notify({Title = "Drift", Description = "Searching for a server...", Time = 3})
-        jumpServer()
+        ServerHop()
     end,
 })
 
+-- World
 local QuestBox = Tabs.World:AddGroupbox({
     Side = "Left",
     Name = "Quests & Rewards",
     IconName = "scroll",
 })
 
-QuestBox:AddToggle("ticketGrind", {
+QuestBox:AddToggle("TicketGrind", {
     Text = "Auto Ticket Quest",
-    Default = cfg.ticketGrind,
+    Default = Configuration.TicketGrind,
     Tooltip = "Accepts and submits quests",
 })
 
-Toggles.ticketGrind:OnChanged(function()
-    cfg.ticketGrind = Toggles.ticketGrind.Value
+Toggles.TicketGrind:OnChanged(function()
+    Configuration.TicketGrind = Toggles.TicketGrind.Value
 end)
 
-QuestBox:AddDropdown("ticketTier", {
+QuestBox:AddDropdown("TicketTier", {
     Values = {"Easy", "Hard"},
-    Default = cfg.ticketTier,
+    Default = Configuration.TicketTier,
     Text = "Difficulty",
 })
 
-Options.ticketTier:OnChanged(function()
-    cfg.ticketTier = Options.ticketTier.Value
+Options.TicketTier:OnChanged(function()
+    Configuration.TicketTier = Options.TicketTier.Value
 end)
 
 QuestBox:AddButton({
     Text = "Submit Easy Quest",
     Func = function()
-        if remoteHub and remoteHub:FindFirstChild("ClaimQuest") then
-            remoteHub.ClaimQuest:FireServer("Ticket", "Easy")
+        if RemoteHub and RemoteHub:FindFirstChild("ClaimQuest") then
+            RemoteHub.ClaimQuest:FireServer("Ticket", "Easy")
             Library:Notify({Title = "Drift", Description = "Submitted easy ticket quest", Time = 3})
         end
     end,
@@ -824,8 +861,8 @@ QuestBox:AddButton({
 QuestBox:AddButton({
     Text = "Submit Hard Quest",
     Func = function()
-        if remoteHub and remoteHub:FindFirstChild("ClaimQuest") then
-            remoteHub.ClaimQuest:FireServer("Ticket", "Hard")
+        if RemoteHub and RemoteHub:FindFirstChild("ClaimQuest") then
+            RemoteHub.ClaimQuest:FireServer("Ticket", "Hard")
             Library:Notify({Title = "Drift", Description = "Submitted hard ticket quest", Time = 3})
         end
     end,
@@ -836,8 +873,10 @@ QuestBox:AddDivider()
 QuestBox:AddButton({
     Text = "Collect Daily Quests",
     Func = function()
-        if remoteHub and remoteHub:FindFirstChild("ClaimQuest") then
-            for i = 1, 4 do remoteHub.ClaimQuest:FireServer("Daily", i) end
+        if RemoteHub and RemoteHub:FindFirstChild("ClaimQuest") then
+            for Index = 1, 4 do
+                RemoteHub.ClaimQuest:FireServer("Daily", Index)
+            end
             Library:Notify({Title = "Drift", Description = "Collected available dailies", Time = 3})
         end
     end,
@@ -848,10 +887,10 @@ QuestBox:AddButton({
     Text = "Claim Days 1-7",
     Func = function()
         task.spawn(function()
-            if remoteHub and remoteHub:FindFirstChild("DailyReward") then
-                for day = 1, 7 do
-                    remoteHub.DailyReward:FireServer(day)
-                    task.wait(cfg.dailyPause)
+            if RemoteHub and RemoteHub:FindFirstChild("DailyReward") then
+                for Day = 1, 7 do
+                    RemoteHub.DailyReward:FireServer(Day)
+                    task.wait(Configuration.DailyPause)
                 end
                 Library:Notify({Title = "Drift", Description = "Claimed all 7 daily rewards", Time = 3})
             end
@@ -863,10 +902,10 @@ QuestBox:AddButton({
 QuestBox:AddButton({
     Text = "Redeem All Codes",
     Func = function()
-        local codes = {"33MVisits", "32MVisits", "31MVisits", "30MVisits", "Taiji", "49KLikes", "48KLikes", "47KLikes", "46KLikes", "13KActives", "HWF", "RELEASE"}
-        if remoteHub and remoteHub:FindFirstChild("RedeemCode") then
-            for _, c in ipairs(codes) do
-                remoteHub.RedeemCode:FireServer(c)
+        local Codes = {"33MVisits", "32MVisits", "31MVisits", "30MVisits", "Taiji", "49KLikes", "48KLikes", "47KLikes", "46KLikes", "13KActives", "HWF", "RELEASE"}
+        if RemoteHub and RemoteHub:FindFirstChild("RedeemCode") then
+            for _, Code in Codes do
+                RemoteHub.RedeemCode:FireServer(Code)
                 task.wait(0.2)
             end
             Library:Notify({Title = "Drift", Description = "Redeemed all known codes", Time = 3})
@@ -881,116 +920,116 @@ local ShopBox = Tabs.World:AddGroupbox({
     IconName = "shopping-cart",
 })
 
-ShopBox:AddDropdown("forgeTarget", {
+ShopBox:AddDropdown("ForgeTarget", {
     Values = {"Nameless Bait", "Frost Bait", "Rainbow Bait"},
-    Default = cfg.forgeTarget,
+    Default = Configuration.ForgeTarget,
     Text = "Craft Target",
 })
 
-Options.forgeTarget:OnChanged(function()
-    cfg.forgeTarget = Options.forgeTarget.Value
+Options.ForgeTarget:OnChanged(function()
+    Configuration.ForgeTarget = Options.ForgeTarget.Value
 end)
 
-ShopBox:AddSlider("forgeQuantity", {
+ShopBox:AddSlider("ForgeQuantity", {
     Text = "Craft Amount",
-    Default = cfg.forgeQuantity,
+    Default = Configuration.ForgeQuantity,
     Min = 1,
     Max = 10,
     Rounding = 0,
 })
 
-Options.forgeQuantity:OnChanged(function()
-    cfg.forgeQuantity = Options.forgeQuantity.Value
+Options.ForgeQuantity:OnChanged(function()
+    Configuration.ForgeQuantity = Options.ForgeQuantity.Value
 end)
 
-ShopBox:AddToggle("baitForge", {
+ShopBox:AddToggle("BaitForge", {
     Text = "Auto Craft Bait",
-    Default = cfg.baitForge,
+    Default = Configuration.BaitForge,
     Tooltip = "Crafts when ingredients exist",
 })
 
-Toggles.baitForge:OnChanged(function()
-    cfg.baitForge = Toggles.baitForge.Value
+Toggles.BaitForge:OnChanged(function()
+    Configuration.BaitForge = Toggles.BaitForge.Value
 end)
 
 ShopBox:AddDivider()
 
-ShopBox:AddDropdown("restockTarget", {
+ShopBox:AddDropdown("RestockTarget", {
     Values = {"Ancestral Bait", "Elite Bait", "Corrupted Essence Bait", "Crude Mash Bait", "Basic Bait"},
-    Default = cfg.restockTarget,
+    Default = Configuration.RestockTarget,
     Text = "Buy Target",
 })
 
-Options.restockTarget:OnChanged(function()
-    cfg.restockTarget = Options.restockTarget.Value
+Options.RestockTarget:OnChanged(function()
+    Configuration.RestockTarget = Options.RestockTarget.Value
 end)
 
-ShopBox:AddSlider("restockQuantity", {
+ShopBox:AddSlider("RestockQuantity", {
     Text = "Buy Amount",
-    Default = cfg.restockQuantity,
+    Default = Configuration.RestockQuantity,
     Min = 1,
     Max = 50,
     Rounding = 0,
 })
 
-Options.restockQuantity:OnChanged(function()
-    cfg.restockQuantity = Options.restockQuantity.Value
+Options.RestockQuantity:OnChanged(function()
+    Configuration.RestockQuantity = Options.RestockQuantity.Value
 end)
 
-ShopBox:AddSlider("restockFloor", {
+ShopBox:AddSlider("RestockFloor", {
     Text = "Stock Threshold",
-    Default = cfg.restockFloor,
+    Default = Configuration.RestockFloor,
     Min = 5,
     Max = 50,
     Rounding = 0,
 })
 
-Options.restockFloor:OnChanged(function()
-    cfg.restockFloor = Options.restockFloor.Value
+Options.RestockFloor:OnChanged(function()
+    Configuration.RestockFloor = Options.RestockFloor.Value
 end)
 
-ShopBox:AddToggle("baitRestock", {
+ShopBox:AddToggle("BaitRestock", {
     Text = "Auto Buy Bait",
-    Default = cfg.baitRestock,
+    Default = Configuration.BaitRestock,
     Tooltip = "Restocks when inventory low",
 })
 
-Toggles.baitRestock:OnChanged(function()
-    cfg.baitRestock = Toggles.baitRestock.Value
+Toggles.BaitRestock:OnChanged(function()
+    Configuration.BaitRestock = Toggles.BaitRestock.Value
 end)
 
 ShopBox:AddDivider()
 
-ShopBox:AddDropdown("bannerChoice", {
+ShopBox:AddDropdown("BannerChoice", {
     Values = {"Taiji Banner", "Egoless Banner"},
-    Default = cfg.bannerChoice,
+    Default = Configuration.BannerChoice,
     Text = "Gacha Banner",
 })
 
-Options.bannerChoice:OnChanged(function()
-    cfg.bannerChoice = Options.bannerChoice.Value
+Options.BannerChoice:OnChanged(function()
+    Configuration.BannerChoice = Options.BannerChoice.Value
 end)
 
-ShopBox:AddSlider("pullBatch", {
+ShopBox:AddSlider("PullBatch", {
     Text = "Pulls Per Action",
-    Default = cfg.pullBatch,
+    Default = Configuration.PullBatch,
     Min = 1,
     Max = 10,
     Rounding = 0,
 })
 
-Options.pullBatch:OnChanged(function()
-    cfg.pullBatch = Options.pullBatch.Value
+Options.PullBatch:OnChanged(function()
+    Configuration.PullBatch = Options.PullBatch.Value
 end)
 
-ShopBox:AddToggle("bannerPull", {
+ShopBox:AddToggle("BannerPull", {
     Text = "Auto Gacha",
-    Default = cfg.bannerPull,
+    Default = Configuration.BannerPull,
     Tooltip = "Pulls from selected banner",
 })
 
-Toggles.bannerPull:OnChanged(function()
-    cfg.bannerPull = Toggles.bannerPull.Value
+Toggles.BannerPull:OnChanged(function()
+    Configuration.BannerPull = Toggles.BannerPull.Value
 end)
 
 local TeleportLeftBox = Tabs.World:AddGroupbox({
@@ -999,12 +1038,12 @@ local TeleportLeftBox = Tabs.World:AddGroupbox({
     IconName = "map-pin",
 })
 
-for _, isl in ipairs(islandWaypoints) do
+for _, Island in IslandWaypoints do
     TeleportLeftBox:AddButton({
-        Text = isl.label,
+        Text = Island.Label,
         Func = function()
-            if warpTo(isl.coords) then
-                Library:Notify({Title = "Drift", Description = "Arrived at " .. isl.label, Time = 3})
+            if WarpTo(Island.Coords) then
+                Library:Notify({Title = "Drift", Description = "Arrived at " .. Island.Label, Time = 3})
             end
         end,
     })
@@ -1018,12 +1057,12 @@ local TeleportRightBox = Tabs.World:AddGroupbox({
 
 TeleportRightBox:AddLabel("Boss Arenas")
 
-for _, ar in ipairs(arenaWaypoints) do
+for _, Arena in ArenaWaypoints do
     TeleportRightBox:AddButton({
-        Text = ar.label,
+        Text = Arena.Label,
         Func = function()
-            if warpTo(ar.coords) then
-                Library:Notify({Title = "Drift", Description = "Arrived at " .. ar.label, Time = 3})
+            if WarpTo(Arena.Coords) then
+                Library:Notify({Title = "Drift", Description = "Arrived at " .. Arena.Label, Time = 3})
             end
         end,
     })
@@ -1032,12 +1071,12 @@ end
 TeleportRightBox:AddDivider()
 TeleportRightBox:AddLabel("Secret Rods")
 
-for _, sr in ipairs(hiddenRodWaypoints) do
+for _, Rod in HiddenRodWaypoints do
     TeleportRightBox:AddButton({
-        Text = sr.label,
+        Text = Rod.Label,
         Func = function()
-            if warpTo(sr.coords) then
-                Library:Notify({Title = "Drift", Description = "Arrived at " .. sr.label, Time = 3})
+            if WarpTo(Rod.Coords) then
+                Library:Notify({Title = "Drift", Description = "Arrived at " .. Rod.Label, Time = 3})
             end
         end,
     })
@@ -1048,110 +1087,111 @@ TeleportRightBox:AddDivider()
 TeleportRightBox:AddButton({
     Text = "Random Player",
     Func = function()
-        local pool = {}
-        for _, p in ipairs(Players:GetPlayers()) do
-            if p ~= lp and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-                table.insert(pool, p)
+        local Pool = {}
+        for _, Player in Players:GetPlayers() do
+            if Player ~= LocalPlayer and Player.Character and Player.Character:FindFirstChild("HumanoidRootPart") then
+                table.insert(Pool, Player)
             end
         end
-        if #pool == 0 then
+        if #Pool == 0 then
             Library:Notify({Title = "Drift", Description = "No other players found", Time = 3})
             return
         end
-        local pick = pool[math.random(1, #pool)]
-        local r = getRoot()
-        if r and pick.Character and pick.Character:FindFirstChild("HumanoidRootPart") then
-            r.CFrame = pick.Character.HumanoidRootPart.CFrame + Vector3.new(0, 2, 3)
-            Library:Notify({Title = "Drift", Description = "Teleported to " .. pick.DisplayName, Time = 3})
+        local Pick = Pool[math.random(1, #Pool)]
+        local Root = GetRoot()
+        if Root and Pick.Character and Pick.Character:FindFirstChild("HumanoidRootPart") then
+            Root.CFrame = Pick.Character.HumanoidRootPart.CFrame + Vector3.new(0, 2, 3)
+            Library:Notify({Title = "Drift", Description = "Teleported to " .. Pick.DisplayName, Time = 3})
         end
     end,
     Tooltip = "Warps to random player",
 })
 
+-- Visuals
 local MarkerBox = Tabs.Visuals:AddGroupbox({
     Side = "Left",
     Name = "ESP",
     IconName = "eye",
 })
 
-MarkerBox:AddToggle("markerSpirit", {
+MarkerBox:AddToggle("MarkerSpirit", {
     Text = "God Spirit",
-    Default = cfg.markerSpirit,
+    Default = Configuration.MarkerSpirit,
     Tooltip = "Highlights active spirits",
 })
 
-Toggles.markerSpirit:OnChanged(function()
-    cfg.markerSpirit = Toggles.markerSpirit.Value
+Toggles.MarkerSpirit:OnChanged(function()
+    Configuration.MarkerSpirit = Toggles.MarkerSpirit.Value
 end)
 
-MarkerBox:AddToggle("markerRod", {
+MarkerBox:AddToggle("MarkerRod", {
     Text = "Secret Rods",
-    Default = cfg.markerRod,
+    Default = Configuration.MarkerRod,
     Tooltip = "Marks secret rod spawns",
 })
 
-Toggles.markerRod:OnChanged(function()
-    cfg.markerRod = Toggles.markerRod.Value
+Toggles.MarkerRod:OnChanged(function()
+    Configuration.MarkerRod = Toggles.MarkerRod.Value
 end)
 
-MarkerBox:AddToggle("markerBoat", {
+MarkerBox:AddToggle("MarkerBoat", {
     Text = "Boats",
-    Default = cfg.markerBoat,
+    Default = Configuration.MarkerBoat,
     Tooltip = "Highlights nearby boats",
 })
 
-Toggles.markerBoat:OnChanged(function()
-    cfg.markerBoat = Toggles.markerBoat.Value
+Toggles.MarkerBoat:OnChanged(function()
+    Configuration.MarkerBoat = Toggles.MarkerBoat.Value
 end)
 
-MarkerBox:AddToggle("markerMaoshan", {
+MarkerBox:AddToggle("MarkerMaoshan", {
     Text = "Maoshan",
-    Default = cfg.markerMaoshan,
+    Default = Configuration.MarkerMaoshan,
     Tooltip = "Marks Maoshan NPC",
 })
 
-Toggles.markerMaoshan:OnChanged(function()
-    cfg.markerMaoshan = Toggles.markerMaoshan.Value
+Toggles.MarkerMaoshan:OnChanged(function()
+    Configuration.MarkerMaoshan = Toggles.MarkerMaoshan.Value
 end)
 
-MarkerBox:AddToggle("markerTaoist", {
+MarkerBox:AddToggle("MarkerTaoist", {
     Text = "Taoist",
-    Default = cfg.markerTaoist,
+    Default = Configuration.MarkerTaoist,
     Tooltip = "Marks Taoist NPC",
 })
 
-Toggles.markerTaoist:OnChanged(function()
-    cfg.markerTaoist = Toggles.markerTaoist.Value
+Toggles.MarkerTaoist:OnChanged(function()
+    Configuration.MarkerTaoist = Toggles.MarkerTaoist.Value
 end)
 
-MarkerBox:AddToggle("markerBoss", {
+MarkerBox:AddToggle("MarkerBoss", {
     Text = "Bosses",
-    Default = cfg.markerBoss,
+    Default = Configuration.MarkerBoss,
     Tooltip = "Highlights active bosses",
 })
 
-Toggles.markerBoss:OnChanged(function()
-    cfg.markerBoss = Toggles.markerBoss.Value
+Toggles.MarkerBoss:OnChanged(function()
+    Configuration.MarkerBoss = Toggles.MarkerBoss.Value
 end)
 
-MarkerBox:AddToggle("markerPlayers", {
+MarkerBox:AddToggle("MarkerPlayers", {
     Text = "Players",
-    Default = cfg.markerPlayers,
+    Default = Configuration.MarkerPlayers,
     Tooltip = "Shows player markers",
 })
 
-Toggles.markerPlayers:OnChanged(function()
-    cfg.markerPlayers = Toggles.markerPlayers.Value
+Toggles.MarkerPlayers:OnChanged(function()
+    Configuration.MarkerPlayers = Toggles.MarkerPlayers.Value
 end)
 
-MarkerBox:AddToggle("hookRing", {
+MarkerBox:AddToggle("HookRing", {
     Text = "Fish Target Ring",
-    Default = cfg.hookRing,
+    Default = Configuration.HookRing,
     Tooltip = "Red ring on hooked fish",
 })
 
-Toggles.hookRing:OnChanged(function()
-    cfg.hookRing = Toggles.hookRing.Value
+Toggles.HookRing:OnChanged(function()
+    Configuration.HookRing = Toggles.HookRing.Value
 end)
 
 local RenderBox = Tabs.Visuals:AddGroupbox({
@@ -1160,39 +1200,46 @@ local RenderBox = Tabs.Visuals:AddGroupbox({
     IconName = "monitor",
 })
 
-RenderBox:AddToggle("clearFog", {
+RenderBox:AddToggle("ClearFog", {
     Text = "No Fog",
-    Default = cfg.clearFog,
+    Default = Configuration.ClearFog,
     Tooltip = "Removes all fog effects",
 })
 
-Toggles.clearFog:OnChanged(function()
-    cfg.clearFog = Toggles.clearFog.Value
-    if cfg.clearFog then
+Toggles.ClearFog:OnChanged(function()
+    Configuration.ClearFog = Toggles.ClearFog.Value
+    if Configuration.ClearFog then
         Lighting.FogEnd = 1000000
         Lighting.FogStart = 1000000
-        local atmo = Lighting:FindFirstChildWhichIsA("Atmosphere")
-        if atmo then atmo.Density = 0; atmo.Haze = 0; atmo.Glare = 0 end
-        for _, d in ipairs(cam:GetDescendants()) do
-            if d:IsA("ParticleEmitter") then d.Enabled = false end
+        local Atmosphere = Lighting:FindFirstChildWhichIsA("Atmosphere")
+        if Atmosphere then
+            Atmosphere.Density = 0
+            Atmosphere.Haze = 0
+            Atmosphere.Glare = 0
+        end
+        for _, Descendant in Camera:QueryDescendants("ParticleEmitter") do
+            Descendant.Enabled = false
         end
     else
         Lighting.FogEnd = 100000
         Lighting.FogStart = 0
-        local atmo = Lighting:FindFirstChildWhichIsA("Atmosphere")
-        if atmo then atmo.Density = 0.3; atmo.Haze = 0.5 end
+        local Atmosphere = Lighting:FindFirstChildWhichIsA("Atmosphere")
+        if Atmosphere then
+            Atmosphere.Density = 0.3
+            Atmosphere.Haze = 0.5
+        end
     end
 end)
 
-RenderBox:AddToggle("maxBright", {
+RenderBox:AddToggle("MaxBright", {
     Text = "Fullbright",
-    Default = cfg.maxBright,
+    Default = Configuration.MaxBright,
     Tooltip = "Maximum ambient lighting",
 })
 
-Toggles.maxBright:OnChanged(function()
-    cfg.maxBright = Toggles.maxBright.Value
-    if not cfg.maxBright then
+Toggles.MaxBright:OnChanged(function()
+    Configuration.MaxBright = Toggles.MaxBright.Value
+    if not Configuration.MaxBright then
         Lighting.Brightness = 2
         Lighting.Ambient = Color3.fromRGB(70, 70, 70)
         Lighting.OutdoorAmbient = Color3.fromRGB(70, 70, 70)
@@ -1200,29 +1247,33 @@ Toggles.maxBright:OnChanged(function()
     end
 end)
 
-RenderBox:AddToggle("lowGfx", {
+RenderBox:AddToggle("LowGfx", {
     Text = "Performance Mode",
-    Default = cfg.lowGfx,
+    Default = Configuration.LowGfx,
     Tooltip = "Disables shadows and effects",
 })
 
-Toggles.lowGfx:OnChanged(function()
-    cfg.lowGfx = Toggles.lowGfx.Value
-    Lighting.GlobalShadows = not cfg.lowGfx
+Toggles.LowGfx:OnChanged(function()
+    Configuration.LowGfx = Toggles.LowGfx.Value
+    Lighting.GlobalShadows = not Configuration.LowGfx
 end)
 
-RenderBox:AddToggle("stripUi", {
+RenderBox:AddToggle("StripUi", {
     Text = "Hide Game UI",
-    Default = cfg.stripUi,
+    Default = Configuration.StripUi,
     Tooltip = "Hides default game interface",
 })
 
-Toggles.stripUi:OnChanged(function()
-    cfg.stripUi = Toggles.stripUi.Value
-    local pg = lp:FindFirstChild("PlayerGui")
-    if pg then
-        if pg:FindFirstChild("MainGui") then pg.MainGui.Enabled = not cfg.stripUi end
-        if pg:FindFirstChild("Fisher_GUI") then pg.Fisher_GUI.Enabled = not cfg.stripUi end
+Toggles.StripUi:OnChanged(function()
+    Configuration.StripUi = Toggles.StripUi.Value
+    local PlayerGui = LocalPlayer:FindFirstChild("PlayerGui")
+    if PlayerGui then
+        if PlayerGui:FindFirstChild("MainGui") then
+            PlayerGui.MainGui.Enabled = not Configuration.StripUi
+        end
+        if PlayerGui:FindFirstChild("Fisher_GUI") then
+            PlayerGui.Fisher_GUI.Enabled = not Configuration.StripUi
+        end
     end
 end)
 
@@ -1231,125 +1282,134 @@ RenderBox:AddDivider()
 RenderBox:AddButton({
     Text = "Unlock All Index",
     Func = function()
-        local revealed = 0
-        local accountData = ReplicatedStorage:FindFirstChild("Data") and ReplicatedStorage.Data:FindFirstChild(lp.UserId)
-        if accountData and accountData:FindFirstChild("Index") then
-            for _, b in ipairs(accountData.Index:GetChildren()) do
-                if b:IsA("BoolValue") then b.Value = true end
+        local Revealed = 0
+        local AccountData = ReplicatedStorage:FindFirstChild("Data") and ReplicatedStorage.Data:FindFirstChild(LocalPlayer.UserId)
+        if AccountData and AccountData:FindFirstChild("Index") then
+            for _, Value in AccountData.Index:QueryDescendants("> BoolValue") do
+                Value.Value = true
             end
         end
-        local pg = lp:FindFirstChild("PlayerGui")
-        if pg and pg:FindFirstChild("MainGui") and pg.MainGui:FindFirstChild("Menu") and pg.MainGui.Menu:FindFirstChild("Index") then
-            local indexList = pg.MainGui.Menu.Index:FindFirstChild("IndexFrame") and pg.MainGui.Menu.Index.IndexFrame:FindFirstChild("Indexlist")
-            if indexList then
-                for _, f in ipairs(indexList:GetChildren()) do
-                    if f:IsA("Frame") then
-                        revealed = revealed + 1
-                        local btn = f:FindFirstChild("Button")
-                        if btn then
-                            local title = btn:FindFirstChild("Title")
-                            if title and title:IsA("TextLabel") then title.Text = f.Name end
-                            local detail = btn:FindFirstChild("Detail")
-                            if detail then
-                                detail.Visible = true
-                                for _, img in ipairs(detail:GetDescendants()) do
-                                    if img:IsA("ImageLabel") then img.ImageColor3 = Color3.new(1, 1, 1) end
-                                end
+        local PlayerGui = LocalPlayer:FindFirstChild("PlayerGui")
+        if PlayerGui and PlayerGui:FindFirstChild("MainGui") and PlayerGui.MainGui:FindFirstChild("Menu") and PlayerGui.MainGui.Menu:FindFirstChild("Index") then
+            local IndexList = PlayerGui.MainGui.Menu.Index:FindFirstChild("IndexFrame") and PlayerGui.MainGui.Menu.Index.IndexFrame:FindFirstChild("Indexlist")
+            if IndexList then
+                for _, IndexFrame in IndexList:QueryDescendants("> Frame") do
+                    Revealed = Revealed + 1
+                    local EntryButton = IndexFrame:FindFirstChild("Button")
+                    if EntryButton then
+                        local NameLabel = EntryButton:FindFirstChild("Title")
+                        if NameLabel and NameLabel:IsA("TextLabel") then
+                            NameLabel.Text = IndexFrame.Name
+                        end
+                        local DetailLabel = EntryButton:FindFirstChild("Detail")
+                        if DetailLabel then
+                            DetailLabel.Visible = true
+                            for _, ImageLabel in DetailLabel:QueryDescendants("ImageLabel") do
+                                ImageLabel.ImageColor3 = Color3.new(1, 1, 1)
                             end
                         end
                     end
                 end
             end
         end
-        Library:Notify({Title = "Drift", Description = string.format("Revealed %d fish in index", revealed > 0 and revealed or 109), Time = 4})
+        Library:Notify({Title = "Drift", Description = string.format("Revealed %d fish in index", Revealed > 0 and Revealed or 109), Time = 4})
     end,
     Tooltip = "Shows all fish entries",
 })
 
+-- Movement
 local MoveBox = Tabs.Movement:AddGroupbox({
     Side = "Left",
     Name = "Movement",
     IconName = "footprints",
 })
 
-MoveBox:AddToggle("speedHack", {
+MoveBox:AddToggle("SpeedHack", {
     Text = "Speed Boost",
-    Default = cfg.speedHack,
+    Default = Configuration.SpeedHack,
     Tooltip = "Increases walk speed",
 })
 
-Toggles.speedHack:OnChanged(function()
-    cfg.speedHack = Toggles.speedHack.Value
-    local hum = lp.Character and lp.Character:FindFirstChildOfClass("Humanoid")
-    if hum then hum.WalkSpeed = cfg.speedHack and cfg.speedAmount or 16 end
+Toggles.SpeedHack:OnChanged(function()
+    Configuration.SpeedHack = Toggles.SpeedHack.Value
+    local Humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+    if Humanoid then
+        if Configuration.SpeedHack then
+            Humanoid.WalkSpeed = Configuration.SpeedAmount
+        else
+            Humanoid.WalkSpeed = 16
+        end
+    end
 end)
 
-MoveBox:AddSlider("speedAmount", {
+MoveBox:AddSlider("SpeedAmount", {
     Text = "Speed Value",
-    Default = cfg.speedAmount,
+    Default = Configuration.SpeedAmount,
     Min = 16,
     Max = 120,
     Rounding = 0,
 })
 
-Options.speedAmount:OnChanged(function()
-    cfg.speedAmount = Options.speedAmount.Value
-    if cfg.speedHack then
-        local hum = lp.Character and lp.Character:FindFirstChildOfClass("Humanoid")
-        if hum then hum.WalkSpeed = cfg.speedAmount end
+Options.SpeedAmount:OnChanged(function()
+    Configuration.SpeedAmount = Options.SpeedAmount.Value
+    if Configuration.SpeedHack then
+        local Humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if Humanoid then
+            Humanoid.WalkSpeed = Configuration.SpeedAmount
+        end
     end
 end)
 
-MoveBox:AddToggle("flightMode", {
+MoveBox:AddToggle("FlightMode", {
     Text = "Fly",
-    Default = cfg.flightMode,
+    Default = Configuration.FlightMode,
     Tooltip = "Free flight with WASD",
 })
 
-Toggles.flightMode:OnChanged(function()
-    cfg.flightMode = Toggles.flightMode.Value
+Toggles.FlightMode:OnChanged(function()
+    Configuration.FlightMode = Toggles.FlightMode.Value
 end)
 
-MoveBox:AddSlider("flightVelocity", {
+MoveBox:AddSlider("FlightVelocity", {
     Text = "Fly Speed",
-    Default = cfg.flightVelocity,
+    Default = Configuration.FlightVelocity,
     Min = 20,
     Max = 150,
     Rounding = 0,
 })
 
-Options.flightVelocity:OnChanged(function()
-    cfg.flightVelocity = Options.flightVelocity.Value
+Options.FlightVelocity:OnChanged(function()
+    Configuration.FlightVelocity = Options.FlightVelocity.Value
 end)
 
-MoveBox:AddToggle("moonJump", {
+MoveBox:AddToggle("MoonJump", {
     Text = "Infinite Jump",
-    Default = cfg.moonJump,
+    Default = Configuration.MoonJump,
     Tooltip = "Jump infinitely mid-air",
 })
 
-Toggles.moonJump:OnChanged(function()
-    cfg.moonJump = Toggles.moonJump.Value
+Toggles.MoonJump:OnChanged(function()
+    Configuration.MoonJump = Toggles.MoonJump.Value
 end)
 
-MoveBox:AddToggle("waterWalk", {
+MoveBox:AddToggle("WaterWalk", {
     Text = "Walk on Water",
-    Default = cfg.waterWalk,
+    Default = Configuration.WaterWalk,
     Tooltip = "Stand on ocean surface",
 })
 
-Toggles.waterWalk:OnChanged(function()
-    cfg.waterWalk = Toggles.waterWalk.Value
+Toggles.WaterWalk:OnChanged(function()
+    Configuration.WaterWalk = Toggles.WaterWalk.Value
 end)
 
-MoveBox:AddToggle("phaseThrough", {
+MoveBox:AddToggle("PhaseThrough", {
     Text = "Noclip",
-    Default = cfg.phaseThrough,
+    Default = Configuration.PhaseThrough,
     Tooltip = "Walk through solid walls",
 })
 
-Toggles.phaseThrough:OnChanged(function()
-    cfg.phaseThrough = Toggles.phaseThrough.Value
+Toggles.PhaseThrough:OnChanged(function()
+    Configuration.PhaseThrough = Toggles.PhaseThrough.Value
 end)
 
 local StabilityBox = Tabs.Movement:AddGroupbox({
@@ -1358,24 +1418,24 @@ local StabilityBox = Tabs.Movement:AddGroupbox({
     IconName = "shield",
 })
 
-StabilityBox:AddToggle("idleGuard", {
+StabilityBox:AddToggle("IdleGuard", {
     Text = "Anti-AFK",
-    Default = cfg.idleGuard,
+    Default = Configuration.IdleGuard,
     Tooltip = "Prevents idle disconnect",
 })
 
-Toggles.idleGuard:OnChanged(function()
-    cfg.idleGuard = Toggles.idleGuard.Value
+Toggles.IdleGuard:OnChanged(function()
+    Configuration.IdleGuard = Toggles.IdleGuard.Value
 end)
 
-StabilityBox:AddToggle("reconnect", {
+StabilityBox:AddToggle("Reconnect", {
     Text = "Auto Rejoin",
-    Default = cfg.reconnect,
+    Default = Configuration.Reconnect,
     Tooltip = "Reconnects after kick",
 })
 
-Toggles.reconnect:OnChanged(function()
-    cfg.reconnect = Toggles.reconnect.Value
+Toggles.Reconnect:OnChanged(function()
+    Configuration.Reconnect = Toggles.Reconnect.Value
 end)
 
 StabilityBox:AddDivider()
@@ -1383,7 +1443,7 @@ StabilityBox:AddDivider()
 StabilityBox:AddButton({
     Text = "Save Config",
     Func = function()
-        if persistConfig() then
+        if PersistConfig() then
             Library:Notify({Title = "Drift", Description = "Configuration saved successfully", Time = 3})
         else
             Library:Notify({Title = "Drift", Description = "Failed to save configuration", Time = 3})
@@ -1395,7 +1455,7 @@ StabilityBox:AddButton({
 StabilityBox:AddButton({
     Text = "Load Config",
     Func = function()
-        if restoreConfig() then
+        if RestoreConfig() then
             Library:Notify({Title = "Drift", Description = "Configuration loaded successfully", Time = 3})
         else
             Library:Notify({Title = "Drift", Description = "No saved configuration found", Time = 3})
@@ -1404,6 +1464,7 @@ StabilityBox:AddButton({
     Tooltip = "Loads saved settings",
 })
 
+-- UI Settings
 local MenuGroup = Tabs["UI Settings"]:AddGroupbox({
     Side = "Left",
     Name = "Menu",
@@ -1413,8 +1474,8 @@ local MenuGroup = Tabs["UI Settings"]:AddGroupbox({
 MenuGroup:AddToggle("KeybindMenuOpen", {
     Default = Library.KeybindFrame.Visible,
     Text = "Open Keybind Menu",
-    Callback = function(value)
-        Library.KeybindFrame.Visible = value
+    Callback = function(Value)
+        Library.KeybindFrame.Visible = Value
     end,
 })
 
@@ -1464,443 +1525,521 @@ SaveManager:BuildConfigSection(Tabs["UI Settings"])
 ThemeManager:ApplyToTab(Tabs["UI Settings"])
 SaveManager:LoadAutoloadConfig()
 
-local seaFloor = trackObject(Instance.new("Part"))
-seaFloor.Name = "DriftSeaFloor"
-seaFloor.Size = Vector3.new(60, 2, 60)
-seaFloor.Anchored = true
-seaFloor.CanCollide = false
-seaFloor.Transparency = 1
-seaFloor.Parent = Workspace
+-- ESP System
+local SeaFloor = TrackObject(Instance.new("Part"))
+SeaFloor.Name = "DriftSeaFloor"
+SeaFloor.Size = Vector3.new(60, 2, 60)
+SeaFloor.Anchored = true
+SeaFloor.CanCollide = false
+SeaFloor.Transparency = 1
+SeaFloor.Parent = Workspace
 
-local espBin = trackObject(Instance.new("Folder"))
-espBin.Name = "DriftESP"
-espBin.Parent = Workspace
+local EspBin = TrackObject(Instance.new("Folder"))
+EspBin.Name = "DriftESP"
+EspBin.Parent = Workspace
 
-local ringBase = trackObject(Instance.new("Part"))
-ringBase.Name = "DriftRingBase"
-ringBase.Size = Vector3.new(0.5, 0.5, 0.5)
-ringBase.Transparency = 1
-ringBase.CanCollide = false
-ringBase.Anchored = true
-ringBase.Parent = Workspace
+local RingBase = TrackObject(Instance.new("Part"))
+RingBase.Name = "DriftRingBase"
+RingBase.Size = Vector3.new(0.5, 0.5, 0.5)
+RingBase.Transparency = 1
+RingBase.CanCollide = false
+RingBase.Anchored = true
+RingBase.Parent = Workspace
 
-local ringVisual = Instance.new("CylinderHandleAdornment")
-ringVisual.Name = "DriftRing"
-ringVisual.Adornee = ringBase
-ringVisual.AlwaysOnTop = true
-ringVisual.ZIndex = 5
-ringVisual.Radius = 4.5
-ringVisual.InnerRadius = 4.35
-ringVisual.Height = 0.05
-ringVisual.Color3 = Color3.fromRGB(255, 50, 50)
-ringVisual.Transparency = 0.1
-ringVisual.CFrame = CFrame.Angles(math.rad(90), 0, 0)
-ringVisual.Visible = false
-ringVisual.Parent = ringBase
+local RingVisual = Instance.new("CylinderHandleAdornment")
+RingVisual.Name = "DriftRing"
+RingVisual.Adornee = RingBase
+RingVisual.AlwaysOnTop = true
+RingVisual.ZIndex = 5
+RingVisual.Radius = 4.5
+RingVisual.InnerRadius = 4.35
+RingVisual.Height = 0.05
+RingVisual.Color3 = Color3.fromRGB(255, 50, 50)
+RingVisual.Transparency = 0.1
+RingVisual.CFrame = CFrame.Angles(math.rad(90), 0, 0)
+RingVisual.Visible = false
+RingVisual.Parent = RingBase
 
-local trackedMarkers = {}
+local TrackedMarkers = {}
 
-local function attachMarker(inst, tag, category, tint)
-    if not inst or trackedMarkers[inst] then return end
-    local anchor = inst:IsA("BasePart") and inst or inst:FindFirstChildWhichIsA("BasePart")
-    if not anchor then return end
-
-    local billboard = Instance.new("BillboardGui")
-    billboard.Name = "Marker_" .. tag
-    billboard.Size = UDim2.new(0, 200, 0, 20)
-    billboard.StudsOffset = Vector3.new(0, 2.5, 0)
-    billboard.AlwaysOnTop = true
-    billboard.Adornee = anchor
-    billboard.Parent = espBin
-
-    local txt = Instance.new("TextLabel", billboard)
-    txt.Size = UDim2.new(1, 0, 1, 0)
-    txt.BackgroundTransparency = 1
-    txt.Font = Enum.Font.GothamBold
-    txt.Text = tag
-    txt.TextColor3 = tint or Color3.fromRGB(255, 255, 255)
-    txt.TextStrokeTransparency = 0
-    txt.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-    txt.TextSize = 12
-
-    trackedMarkers[inst] = {gui = billboard, text = txt, anchor = anchor, category = category, tag = tag}
-end
-
-local function detachMarker(inst)
-    local data = trackedMarkers[inst]
-    if data then
-        if data.gui and data.gui.Parent then data.gui:Destroy() end
-        trackedMarkers[inst] = nil
+local function AttachMarker(MarkerTarget, Tag, Category, Tint)
+    if not MarkerTarget or TrackedMarkers[MarkerTarget] then
+        return
     end
+    local Anchor = MarkerTarget:IsA("BasePart") and MarkerTarget or MarkerTarget:FindFirstChildWhichIsA("BasePart")
+    if not Anchor then
+        return
+    end
+
+    local Billboard = Instance.new("BillboardGui")
+    Billboard.Name = "Marker_" .. Tag
+    Billboard.Size = UDim2.new(0, 200, 0, 20)
+    Billboard.StudsOffset = Vector3.new(0, 2.5, 0)
+    Billboard.AlwaysOnTop = true
+    Billboard.Adornee = Anchor
+    Billboard.Parent = EspBin
+
+    local Text = Instance.new("TextLabel", Billboard)
+    Text.Size = UDim2.new(1, 0, 1, 0)
+    Text.BackgroundTransparency = 1
+    Text.Font = Enum.Font.GothamBold
+    Text.Text = Tag
+    Text.TextColor3 = Tint or Color3.fromRGB(255, 255, 255)
+    Text.TextStrokeTransparency = 0
+    Text.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    Text.TextSize = 12
+
+    TrackedMarkers[MarkerTarget] = {Gui = Billboard, Text = Text, Anchor = Anchor, Category = Category, Tag = Tag}
 end
 
-local castClock = 0
-local sellClock = 0
-local skillClock = 0
-local gachaClock = 0
-local restockClock = 0
-local questClock = 0
-local prayClock = 0
-local equipClock = 0
-local progressClock = 0
-local shieldClock = 0
+local function DetachMarker(MarkerTarget)
+    local MarkerData = TrackedMarkers[MarkerTarget]
+    if not MarkerData then
+        return
+    end
+    if MarkerData.Gui and MarkerData.Gui.Parent then
+        MarkerData.Gui:Destroy()
+    end
+    TrackedMarkers[MarkerTarget] = nil
+end
 
-hookEvent(RunService.Heartbeat, function()
-    if not sessionActive then return end
+-- Background Loops
+local CastClock = 0
+local SellClock = 0
+local SkillClock = 0
+local GachaClock = 0
+local RestockClock = 0
+local QuestClock = 0
+local PrayClock = 0
+local EquipClock = 0
+local ProgressClock = 0
+local ShieldClock = 0
+
+HookEvent(RunService.Heartbeat, function()
+    if not IsSessionActive then
+        return
+    end
     pcall(function()
-        local ch = lp.Character
-        local root = ch and ch:FindFirstChild("HumanoidRootPart")
-        local hum = ch and ch:FindFirstChildOfClass("Humanoid")
-        if not root or not hum then return end
-        local now = tick()
-        local pg = lp:FindFirstChild("PlayerGui")
-        local accountData = ReplicatedStorage:FindFirstChild("Data") and ReplicatedStorage.Data:FindFirstChild(lp.UserId)
+        local Character = LocalPlayer.Character
+        local Root = Character and Character:FindFirstChild("HumanoidRootPart")
+        local Humanoid = Character and Character:FindFirstChildOfClass("Humanoid")
+        if not Root or not Humanoid then
+            return
+        end
+        local Now = tick()
+        local PlayerGui = LocalPlayer:FindFirstChild("PlayerGui")
+        local AccountData = ReplicatedStorage:FindFirstChild("Data") and ReplicatedStorage.Data:FindFirstChild(LocalPlayer.UserId)
 
-        if cfg.speedHack then
-            hum.WalkSpeed = cfg.speedAmount
+        if Configuration.SpeedHack then
+            Humanoid.WalkSpeed = Configuration.SpeedAmount
         end
 
-        if cfg.waterWalk then
-            seaFloor.CFrame = CFrame.new(root.Position.X, 0, root.Position.Z)
-            seaFloor.CanCollide = (root.Position.Y >= -1)
+        if Configuration.WaterWalk then
+            SeaFloor.CFrame = CFrame.new(Root.Position.X, 0, Root.Position.Z)
+            SeaFloor.CanCollide = (Root.Position.Y >= -1)
         else
-            seaFloor.CanCollide = false
+            SeaFloor.CanCollide = false
         end
 
-        if cfg.phaseThrough then
-            for _, part in ipairs(ch:GetDescendants()) do
-                if part:IsA("BasePart") and part.CanCollide then
-                    part.CanCollide = false
+        if Configuration.PhaseThrough then
+            for _, Part in Character:QueryDescendants("BasePart") do
+                if Part.CanCollide then
+                    Part.CanCollide = false
                 end
             end
         end
 
-        local hooked = ch:GetAttribute("Fishing") == true
-        local inMinigame = ch:GetAttribute("Minigame") == true or (pg and pg:FindFirstChild("MainGui") and pg.MainGui:FindFirstChild("Fishing") and pg.MainGui.Fishing.Visible)
-        local onCooldown = ch:GetAttribute("CDForTheNextThrow") == true
-        local swimming = ch:GetAttribute("Swimming") == true
+        local IsHooked = Character:GetAttribute("Fishing") == true
+        local IsInMinigame = Character:GetAttribute("Minigame") == true or (PlayerGui and PlayerGui:FindFirstChild("MainGui") and PlayerGui.MainGui:FindFirstChild("Fishing") and PlayerGui.MainGui.Fishing.Visible)
+        local IsOnCooldown = Character:GetAttribute("CDForTheNextThrow") == true
+        local IsSwimming = Character:GetAttribute("Swimming") == true
 
-        if inMinigame then
-            local fPanel = pg and pg:FindFirstChild("MainGui") and pg.MainGui:FindFirstChild("Fishing")
-            if fPanel and fPanel.Visible then
-                if cfg.barLock then
-                    local barFrame = fPanel:FindFirstChild("BarFrame")
-                    if barFrame and barFrame:FindFirstChild("Bar") then
-                        barFrame.Bar:TweenPosition(UDim2.new(0.5, 0, 0.5, 0), Enum.EasingDirection.InOut, Enum.EasingStyle.Linear, 0, true)
-                        barFrame.Bar.Position = UDim2.new(0.5, 0, 0.5, 0)
+        if IsInMinigame then
+            local FishingPanel = PlayerGui and PlayerGui:FindFirstChild("MainGui") and PlayerGui.MainGui:FindFirstChild("Fishing")
+            if FishingPanel and FishingPanel.Visible then
+                if Configuration.BarLock then
+                    local BarFrame = FishingPanel:FindFirstChild("BarFrame")
+                    if BarFrame and BarFrame:FindFirstChild("Bar") then
+                        BarFrame.Bar:TweenPosition(UDim2.new(0.5, 0, 0.5, 0), Enum.EasingDirection.InOut, Enum.EasingStyle.Linear, 0, true)
+                        BarFrame.Bar.Position = UDim2.new(0.5, 0, 0.5, 0)
                     end
                 end
 
-                if cfg.slamBot and fPanel:FindFirstChild("PerfectButton") and fPanel.PerfectButton.Visible then
-                    if remoteHub:FindFirstChild("Slam") then remoteHub.Slam:FireServer() end
-                end
-
-                if cfg.chargeBot and fPanel:FindFirstChild("Charge") and fPanel.Charge.Visible then
-                    if remoteHub:FindFirstChild("Charge") then remoteHub.Charge:FireServer() end
-                end
-
-                if cfg.barLock and (now - progressClock >= 0.08) then
-                    if remoteHub and remoteHub:FindFirstChild("UpdateFishProgression") then
-                        remoteHub.UpdateFishProgression:FireServer()
+                if Configuration.SlamBot and FishingPanel:FindFirstChild("PerfectButton") and FishingPanel.PerfectButton.Visible then
+                    if RemoteHub:FindFirstChild("Slam") then
+                        RemoteHub.Slam:FireServer()
                     end
-                    progressClock = now
                 end
 
-                if cfg.skillBot and (now - skillClock >= 0.15) then
-                    for _, key in ipairs({"Z", "X", "C", "V"}) do
-                        if remoteHub:FindFirstChild("UseSkill") then remoteHub.UseSkill:FireServer(key) end
-                        if remoteHub:FindFirstChild("TriggerMinigameSkill") then remoteHub.TriggerMinigameSkill:FireServer(key) end
+                if Configuration.ChargeBot and FishingPanel:FindFirstChild("Charge") and FishingPanel.Charge.Visible then
+                    if RemoteHub:FindFirstChild("Charge") then
+                        RemoteHub.Charge:FireServer()
                     end
-                    skillClock = now
                 end
-            end
-        elseif hooked then
-            castClock = now
-        else
-            if cfg.autoCast and not onCooldown and not swimming and (now - castClock >= cfg.castFrequency) then
-                local canFish = true
-                if accountData and accountData:FindFirstChild("InventoryLimit") then
-                    local invCount = 0
-                    if accountData:FindFirstChild("Inventory") then invCount = invCount + #accountData.Inventory:GetChildren() end
-                    if accountData:FindFirstChild("Hotbar") then
-                        for _, item in ipairs(accountData.Hotbar:GetChildren()) do
-                            if item:FindFirstChild("Quantity") then invCount = invCount + item.Quantity.Value else invCount = invCount + 1 end
+
+                if Configuration.BarLock and (Now - ProgressClock >= 0.08) then
+                    if RemoteHub and RemoteHub:FindFirstChild("UpdateFishProgression") then
+                        RemoteHub.UpdateFishProgression:FireServer()
+                    end
+                    ProgressClock = Now
+                end
+
+                if Configuration.SkillBot and (Now - SkillClock >= 0.15) then
+                    for _, Key in {"Z", "X", "C", "V"} do
+                        if RemoteHub:FindFirstChild("UseSkill") then
+                            RemoteHub.UseSkill:FireServer(Key)
+                        end
+                        if RemoteHub:FindFirstChild("TriggerMinigameSkill") then
+                            RemoteHub.TriggerMinigameSkill:FireServer(Key)
                         end
                     end
-                    if invCount >= accountData.InventoryLimit.Value then
-                        canFish = false
-                        if cfg.liquidate and (now - sellClock >= 5.0) and remoteHub:FindFirstChild("SellFish") then
-                            if (cfg.resourceMode or cfg.shieldFish) and accountData:FindFirstChild("Inventory") then
-                                for _, item in ipairs(accountData.Inventory:GetChildren()) do
-                                    local iName = item.Name
-                                    local isFav = item:FindFirstChild("Favorite") and item.Favorite.Value == true
-                                    if not isFav and ((cfg.resourceMode and forgeMaterials[iName]) or (cfg.shieldFish and iName == cfg.shieldTarget)) then
-                                        if remoteHub:FindFirstChild("FavoriteItem") then remoteHub.FavoriteItem:FireServer(item) end
+                    SkillClock = Now
+                end
+            end
+        elseif IsHooked then
+            CastClock = Now
+        else
+            if Configuration.AutoCast and not IsOnCooldown and not IsSwimming and (Now - CastClock >= Configuration.CastFrequency) then
+                local CanFish = true
+                if AccountData and AccountData:FindFirstChild("InventoryLimit") then
+                    local InventoryCount = 0
+                    if AccountData:FindFirstChild("Inventory") then
+                        InventoryCount = InventoryCount + #AccountData.Inventory:QueryDescendants("> Instance")
+                    end
+                    if AccountData:FindFirstChild("Hotbar") then
+                        for _, Item in AccountData.Hotbar:QueryDescendants("> Instance") do
+                            if Item:FindFirstChild("Quantity") then
+                                InventoryCount = InventoryCount + Item.Quantity.Value
+                            else
+                                InventoryCount = InventoryCount + 1
+                            end
+                        end
+                    end
+                    if InventoryCount >= AccountData.InventoryLimit.Value then
+                        CanFish = false
+                        if Configuration.Liquidate and (Now - SellClock >= 5.0) and RemoteHub:FindFirstChild("SellFish") then
+                            if (Configuration.ResourceMode or Configuration.ShieldFish) and AccountData:FindFirstChild("Inventory") then
+                                for _, Item in AccountData.Inventory:QueryDescendants("> Instance") do
+                                    local ItemName = Item.Name
+                                    local IsFavorite = Item:FindFirstChild("Favorite") and Item.Favorite.Value == true
+                                    if not IsFavorite and ((Configuration.ResourceMode and ForgeMaterials[ItemName]) or (Configuration.ShieldFish and ItemName == Configuration.ShieldTarget)) then
+                                        if RemoteHub:FindFirstChild("FavoriteItem") then
+                                            RemoteHub.FavoriteItem:FireServer(Item)
+                                        end
                                     end
                                 end
                             end
-                            remoteHub.SellFish:FireServer("All")
-                            sellClock = now
+                            RemoteHub.SellFish:FireServer("All")
+                            SellClock = Now
                         end
                     end
                 end
 
-                if cfg.liquidate and (now - sellClock >= cfg.liquidateTimer) and remoteHub:FindFirstChild("SellFish") then
-                    if (cfg.resourceMode or cfg.shieldFish) and accountData and accountData:FindFirstChild("Inventory") then
-                        for _, item in ipairs(accountData.Inventory:GetChildren()) do
-                            local iName = item.Name
-                            local isFav = item:FindFirstChild("Favorite") and item.Favorite.Value == true
-                            if not isFav and ((cfg.resourceMode and forgeMaterials[iName]) or (cfg.shieldFish and iName == cfg.shieldTarget)) then
-                                if remoteHub:FindFirstChild("FavoriteItem") then remoteHub.FavoriteItem:FireServer(item) end
+                if Configuration.Liquidate and (Now - SellClock >= Configuration.LiquidateTimer) and RemoteHub:FindFirstChild("SellFish") then
+                    if (Configuration.ResourceMode or Configuration.ShieldFish) and AccountData and AccountData:FindFirstChild("Inventory") then
+                        for _, Item in AccountData.Inventory:QueryDescendants("> Instance") do
+                            local ItemName = Item.Name
+                            local IsFavorite = Item:FindFirstChild("Favorite") and Item.Favorite.Value == true
+                            if not IsFavorite and ((Configuration.ResourceMode and ForgeMaterials[ItemName]) or (Configuration.ShieldFish and ItemName == Configuration.ShieldTarget)) then
+                                if RemoteHub:FindFirstChild("FavoriteItem") then
+                                    RemoteHub.FavoriteItem:FireServer(Item)
+                                end
                             end
                         end
                     end
-                    remoteHub.SellFish:FireServer("All")
-                    sellClock = now
+                    RemoteHub.SellFish:FireServer("All")
+                    SellClock = Now
                 end
 
-                if (cfg.resourceMode or cfg.shieldFish) and (now - shieldClock >= 1.5) and accountData and accountData:FindFirstChild("Inventory") then
-                    shieldClock = now
-                    for _, item in ipairs(accountData.Inventory:GetChildren()) do
-                        local iName = item.Name
-                        local isFav = item:FindFirstChild("Favorite") and item.Favorite.Value == true
-                        if not isFav then
-                            local protect = false
-                            if cfg.resourceMode and forgeMaterials[iName] then protect = true end
-                            if cfg.shieldFish and iName == cfg.shieldTarget then protect = true end
-                            if protect and remoteHub:FindFirstChild("FavoriteItem") then
-                                remoteHub.FavoriteItem:FireServer(item)
+                if (Configuration.ResourceMode or Configuration.ShieldFish) and (Now - ShieldClock >= 1.5) and AccountData and AccountData:FindFirstChild("Inventory") then
+                    ShieldClock = Now
+                    for _, Item in AccountData.Inventory:QueryDescendants("> Instance") do
+                        local ItemName = Item.Name
+                        local IsFavorite = Item:FindFirstChild("Favorite") and Item.Favorite.Value == true
+                        if not IsFavorite then
+                            local ShouldProtect = false
+                            if Configuration.ResourceMode and ForgeMaterials[ItemName] then
+                                ShouldProtect = true
+                            end
+                            if Configuration.ShieldFish and ItemName == Configuration.ShieldTarget then
+                                ShouldProtect = true
+                            end
+                            if ShouldProtect and RemoteHub:FindFirstChild("FavoriteItem") then
+                                RemoteHub.FavoriteItem:FireServer(Item)
                             end
                         end
                     end
                 end
 
-                if canFish and remoteHub and remoteHub:FindFirstChild("Fishing") then
-                    remoteHub.Fishing:FireServer(root.CFrame)
-                    castClock = now
+                if CanFish and RemoteHub and RemoteHub:FindFirstChild("Fishing") then
+                    RemoteHub.Fishing:FireServer(Root.CFrame)
+                    CastClock = Now
                 end
             end
         end
 
-        if (now - equipClock >= 5.0) and accountData then
-            equipClock = now
-            if cfg.smartBait and accountData:FindFirstChild("Bait") and accountData:FindFirstChild("EquippedBait") and remoteHub:FindFirstChild("EquipBait") then
-                local topBait = nil
-                local topLuck = -1
-                local baitLookup = {
+        if (Now - EquipClock >= 5.0) and AccountData then
+            EquipClock = Now
+            if Configuration.SmartBait and AccountData:FindFirstChild("Bait") and AccountData:FindFirstChild("EquippedBait") and RemoteHub:FindFirstChild("EquipBait") then
+                local TopBait = nil
+                local TopLuck = -1
+                local BaitLookup = {
                     ["Ancestral Bait"] = 50, ["Elite Bait"] = 30,
                     ["Corrupted Essence Bait"] = 18, ["Crude Mash Bait"] = 8, ["Basic Bait"] = 3,
                 }
-                for bName, bLuck in pairs(baitLookup) do
-                    local slot = accountData.Bait:FindFirstChild(bName)
-                    if slot and slot.Value > 0 and bLuck > topLuck then
-                        topLuck = bLuck
-                        topBait = bName
+                for BaitName, BaitLuck in BaitLookup do
+                    local BaitSlot = AccountData.Bait:FindFirstChild(BaitName)
+                    if BaitSlot and BaitSlot.Value > 0 and BaitLuck > TopLuck then
+                        TopLuck = BaitLuck
+                        TopBait = BaitName
                     end
                 end
-                if topBait and accountData.EquippedBait.Value ~= topBait then
-                    remoteHub.EquipBait:InvokeServer(topBait)
+                if TopBait and AccountData.EquippedBait.Value ~= TopBait then
+                    RemoteHub.EquipBait:InvokeServer(TopBait)
                 end
             end
 
-            if cfg.smartRod and accountData:FindFirstChild("FishingRodInventory") and accountData:FindFirstChild("FishingRod") and remoteHub:FindFirstChild("EquipFishingRod") then
-                local topRod = nil
-                local topStr = -1
-                for _, r in ipairs(rodCatalog) do
-                    local rSlot = accountData.FishingRodInventory:FindFirstChild(r.label)
-                    local owned = rSlot and rSlot:FindFirstChild("Owned") and rSlot.Owned.Value == true
-                    if owned and r.str > topStr then
-                        topStr = r.str
-                        topRod = r.label
+            if Configuration.SmartRod and AccountData:FindFirstChild("FishingRodInventory") and AccountData:FindFirstChild("FishingRod") and RemoteHub:FindFirstChild("EquipFishingRod") then
+                local TopRod = nil
+                local TopStrength = -1
+                for _, Rod in RodCatalog do
+                    local RodSlot = AccountData.FishingRodInventory:FindFirstChild(Rod.Label)
+                    local Owned = RodSlot and RodSlot:FindFirstChild("Owned") and RodSlot.Owned.Value == true
+                    if Owned and Rod.Strength > TopStrength then
+                        TopStrength = Rod.Strength
+                        TopRod = Rod.Label
                     end
                 end
-                if topRod and accountData.FishingRod.Value ~= topRod then
-                    remoteHub.EquipFishingRod:InvokeServer(topRod)
+                if TopRod and AccountData.FishingRod.Value ~= TopRod then
+                    RemoteHub.EquipFishingRod:InvokeServer(TopRod)
                 end
             end
 
-            if cfg.smartOrb and accountData:FindFirstChild("Orb") and remoteHub:FindFirstChild("EquipOrb") then
-                local orbs = accountData.Orb:GetChildren()
-                if #orbs > 0 then remoteHub.EquipOrb:InvokeServer(orbs[#orbs].Name) end
+            if Configuration.SmartOrb and AccountData:FindFirstChild("Orb") and RemoteHub:FindFirstChild("EquipOrb") then
+                local Orbs = AccountData.Orb:QueryDescendants("> Instance")
+                if #Orbs > 0 then
+                    RemoteHub.EquipOrb:InvokeServer(Orbs[#Orbs].Name)
+                end
             end
         end
 
-        if cfg.liquidate and (now - sellClock >= cfg.liquidateTimer) then
-            if remoteHub and remoteHub:FindFirstChild("SellFish") then
-                remoteHub.SellFish:FireServer("All")
-                sellClock = now
+        if Configuration.Liquidate and (Now - SellClock >= Configuration.LiquidateTimer) then
+            if RemoteHub and RemoteHub:FindFirstChild("SellFish") then
+                RemoteHub.SellFish:FireServer("All")
+                SellClock = Now
             end
         end
 
-        if cfg.spiritPray and (now - prayClock >= 3.0) then
+        if Configuration.SpiritPray and (Now - PrayClock >= 3.0) then
             if Workspace:FindFirstChild("NPC") then
-                local sp = Workspace.NPC:FindFirstChild("Spirit") or Workspace.NPC:FindFirstChild("God")
-                if sp then
-                    for _, d in ipairs(sp:GetDescendants()) do
-                        if d:IsA("ProximityPrompt") then
-                            activatePrompt(d)
-                            prayClock = now
-                        end
+                local Spirit = Workspace.NPC:FindFirstChild("Spirit") or Workspace.NPC:FindFirstChild("God")
+                if Spirit then
+                    for _, Descendant in Spirit:QueryDescendants("ProximityPrompt") do
+                        ActivatePrompt(Descendant)
+                        PrayClock = Now
                     end
                 end
             end
         end
 
-        if cfg.ticketGrind and (now - questClock >= 2.0) then
-            if remoteHub and remoteHub:FindFirstChild("ClaimQuest") then
-                remoteHub.ClaimQuest:FireServer("Ticket", cfg.ticketTier)
-                questClock = now
+        if Configuration.TicketGrind and (Now - QuestClock >= 2.0) then
+            if RemoteHub and RemoteHub:FindFirstChild("ClaimQuest") then
+                RemoteHub.ClaimQuest:FireServer("Ticket", Configuration.TicketTier)
+                QuestClock = Now
             end
         end
 
-        if cfg.dailyGrab and (now - castClock >= 2.0) then
-            if remoteHub and remoteHub:FindFirstChild("DailyReward") then
-                for day = 1, 7 do remoteHub.DailyReward:FireServer(day) end
+        if Configuration.DailyGrab and (Now - CastClock >= 2.0) then
+            if RemoteHub and RemoteHub:FindFirstChild("DailyReward") then
+                for Day = 1, 7 do
+                    RemoteHub.DailyReward:FireServer(Day)
+                end
             end
         end
 
-        if cfg.bannerPull and (now - gachaClock >= 1.5) then
-            if remoteHub and remoteHub:FindFirstChild("Gacha") then
-                remoteHub.Gacha:FireServer(cfg.bannerChoice, cfg.pullBatch)
-                gachaClock = now
+        if Configuration.BannerPull and (Now - GachaClock >= 1.5) then
+            if RemoteHub and RemoteHub:FindFirstChild("Gacha") then
+                RemoteHub.Gacha:FireServer(Configuration.BannerChoice, Configuration.PullBatch)
+                GachaClock = Now
             end
         end
 
-        if cfg.baitForge and (now - castClock >= 2.0) then
-            if remoteHub and remoteHub:FindFirstChild("CraftBait") then
-                remoteHub.CraftBait:FireServer(cfg.forgeTarget, cfg.forgeQuantity)
+        if Configuration.BaitForge and (Now - CastClock >= 2.0) then
+            if RemoteHub and RemoteHub:FindFirstChild("CraftBait") then
+                RemoteHub.CraftBait:FireServer(Configuration.ForgeTarget, Configuration.ForgeQuantity)
             end
         end
 
-        if cfg.baitRestock and (now - restockClock >= cfg.restockPause) then
-            if remoteHub and remoteHub:FindFirstChild("BuyBait") then
-                remoteHub.BuyBait:FireServer(cfg.restockTarget, cfg.restockQuantity)
-                restockClock = now
+        if Configuration.BaitRestock and (Now - RestockClock >= Configuration.RestockPause) then
+            if RemoteHub and RemoteHub:FindFirstChild("BuyBait") then
+                RemoteHub.BuyBait:FireServer(Configuration.RestockTarget, Configuration.RestockQuantity)
+                RestockClock = Now
             end
         end
 
-        if cfg.rhythmBot then
-            if remoteHub and remoteHub:FindFirstChild("RhythmHit") then
-                remoteHub.RhythmHit:FireServer(true, 100)
+        if Configuration.RhythmBot then
+            if RemoteHub and RemoteHub:FindFirstChild("RhythmHit") then
+                RemoteHub.RhythmHit:FireServer(true, 100)
             end
         end
     end)
 end)
 
-local velocityBody, gyroBody = nil, nil
+-- Flight Loop
+local VelocityBody, GyroBody = nil, nil
 
-hookEvent(RunService.RenderStepped, function()
-    if not sessionActive then return end
-    local ch = lp.Character
-    local root = ch and ch:FindFirstChild("HumanoidRootPart")
-    if not root then return end
+HookEvent(RunService.RenderStepped, function()
+    if not IsSessionActive then
+        return
+    end
+    local Character = LocalPlayer.Character
+    local Root = Character and Character:FindFirstChild("HumanoidRootPart")
+    if not Root then
+        return
+    end
 
-    if cfg.flightMode then
-        if not velocityBody then
-            velocityBody = trackObject(Instance.new("BodyVelocity"))
-            velocityBody.MaxForce = Vector3.new(9e9, 9e9, 9e9)
-            velocityBody.Parent = root
+    if Configuration.FlightMode then
+        if not VelocityBody then
+            VelocityBody = TrackObject(Instance.new("BodyVelocity"))
+            VelocityBody.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+            VelocityBody.Parent = Root
 
-            gyroBody = trackObject(Instance.new("BodyGyro"))
-            gyroBody.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
-            gyroBody.Parent = root
+            GyroBody = TrackObject(Instance.new("BodyGyro"))
+            GyroBody.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
+            GyroBody.Parent = Root
         end
 
-        local camCF = cam.CFrame
-        local dir = Vector3.zero
-        if UserInputService:IsKeyDown(Enum.KeyCode.W) then dir = dir + camCF.LookVector end
-        if UserInputService:IsKeyDown(Enum.KeyCode.S) then dir = dir - camCF.LookVector end
-        if UserInputService:IsKeyDown(Enum.KeyCode.D) then dir = dir + camCF.RightVector end
-        if UserInputService:IsKeyDown(Enum.KeyCode.A) then dir = dir - camCF.RightVector end
-        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then dir = dir + Vector3.new(0, 1, 0) end
-        if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then dir = dir - Vector3.new(0, 1, 0) end
+        local CameraCFrame = Camera.CFrame
+        local Direction = Vector3.zero
+        if UserInputService:IsKeyDown(Enum.KeyCode.W) then
+            Direction = Direction + CameraCFrame.LookVector
+        end
+        if UserInputService:IsKeyDown(Enum.KeyCode.S) then
+            Direction = Direction - CameraCFrame.LookVector
+        end
+        if UserInputService:IsKeyDown(Enum.KeyCode.D) then
+            Direction = Direction + CameraCFrame.RightVector
+        end
+        if UserInputService:IsKeyDown(Enum.KeyCode.A) then
+            Direction = Direction - CameraCFrame.RightVector
+        end
+        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+            Direction = Direction + Vector3.new(0, 1, 0)
+        end
+        if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then
+            Direction = Direction - Vector3.new(0, 1, 0)
+        end
 
-        gyroBody.CFrame = camCF
-        velocityBody.Velocity = dir.Magnitude > 0 and dir.Unit * cfg.flightVelocity or Vector3.zero
+        GyroBody.CFrame = CameraCFrame
+        VelocityBody.Velocity = Direction.Magnitude > 0 and Direction.Unit * Configuration.FlightVelocity or Vector3.zero
     else
-        if velocityBody then velocityBody:Destroy(); velocityBody = nil end
-        if gyroBody then gyroBody:Destroy(); gyroBody = nil end
+        if VelocityBody then
+            VelocityBody:Destroy()
+            VelocityBody = nil
+        end
+        if GyroBody then
+            GyroBody:Destroy()
+            GyroBody = nil
+        end
     end
 end)
 
-hookEvent(RunService.RenderStepped, function()
-    if not sessionActive then return end
+-- Bar Lock Loop
+HookEvent(RunService.RenderStepped, function()
+    if not IsSessionActive then
+        return
+    end
     pcall(function()
-        if cfg.barLock then
-            local pg = lp:FindFirstChild("PlayerGui")
-            if pg and pg:FindFirstChild("MainGui") and pg.MainGui:FindFirstChild("Fishing") and pg.MainGui.Fishing.Visible then
-                local fPanel = pg.MainGui.Fishing
-                local barFrame = fPanel:FindFirstChild("BarFrame")
-                if barFrame and barFrame:FindFirstChild("Bar") then
-                    barFrame.Bar.Position = UDim2.new(0.5, 0, 0.5, 0)
+        if Configuration.BarLock then
+            local PlayerGui = LocalPlayer:FindFirstChild("PlayerGui")
+            if PlayerGui and PlayerGui:FindFirstChild("MainGui") and PlayerGui.MainGui:FindFirstChild("Fishing") and PlayerGui.MainGui.Fishing.Visible then
+                local FishingPanel = PlayerGui.MainGui.Fishing
+                local BarFrame = FishingPanel:FindFirstChild("BarFrame")
+                if BarFrame and BarFrame:FindFirstChild("Bar") then
+                    BarFrame.Bar.Position = UDim2.new(0.5, 0, 0.5, 0)
                 end
-                local bossBar = fPanel:FindFirstChild("BossFightBar")
-                if bossBar and bossBar.Visible and bossBar:FindFirstChild("Bar") and bossBar:FindFirstChild("Hitbox") then
-                    bossBar.Bar.Position = bossBar.Hitbox.Position
+                local BossBar = FishingPanel:FindFirstChild("BossFightBar")
+                if BossBar and BossBar.Visible and BossBar:FindFirstChild("Bar") and BossBar:FindFirstChild("Hitbox") then
+                    BossBar.Bar.Position = BossBar.Hitbox.Position
                 end
-                local hpPlayer = fPanel:FindFirstChild("HPPlayer")
-                if hpPlayer and hpPlayer:FindFirstChild("ProgressionBar") then
-                    local pBar = hpPlayer.ProgressionBar
-                    if pBar:FindFirstChild("Bar") then pBar.Bar.Size = UDim2.new(1, 0, 1, 0) end
+                local HPPlayer = FishingPanel:FindFirstChild("HPPlayer")
+                if HPPlayer and HPPlayer:FindFirstChild("ProgressionBar") then
+                    local ProgressionBar = HPPlayer.ProgressionBar
+                    if ProgressionBar:FindFirstChild("Bar") then
+                        ProgressionBar.Bar.Size = UDim2.new(1, 0, 1, 0)
+                    end
                 end
-                if fPanel:FindFirstChild("PerfectButton") and fPanel.PerfectButton.Visible then
-                    if remoteHub and remoteHub:FindFirstChild("Slam") then remoteHub.Slam:FireServer("Perfect") end
+                if FishingPanel:FindFirstChild("PerfectButton") and FishingPanel.PerfectButton.Visible then
+                    if RemoteHub and RemoteHub:FindFirstChild("Slam") then
+                        RemoteHub.Slam:FireServer("Perfect")
+                    end
                 end
-                if fPanel:FindFirstChild("Charge") and fPanel.Charge.Visible then
-                    if remoteHub and remoteHub:FindFirstChild("Charge") then remoteHub.Charge:FireServer(100) end
+                if FishingPanel:FindFirstChild("Charge") and FishingPanel.Charge.Visible then
+                    if RemoteHub and RemoteHub:FindFirstChild("Charge") then
+                        RemoteHub.Charge:FireServer(100)
+                    end
                 end
-                local cutscene = pg:FindFirstChild("MainGui") and pg.MainGui:FindFirstChild("Cutscene")
-                if cutscene and cutscene:FindFirstChild("Hurt") then
-                    cutscene.Hurt.ImageTransparency = 1
+                local Cutscene = PlayerGui:FindFirstChild("MainGui") and PlayerGui.MainGui:FindFirstChild("Cutscene")
+                if Cutscene and Cutscene:FindFirstChild("Hurt") then
+                    Cutscene.Hurt.ImageTransparency = 1
                 end
-                local impactCS = pg:FindFirstChild("Impact") and pg.Impact:FindFirstChild("Cutscene")
-                if impactCS and impactCS:FindFirstChild("Hurt") then
-                    impactCS.Hurt.ImageTransparency = 1
+                local ImpactCutscene = PlayerGui:FindFirstChild("Impact") and PlayerGui.Impact:FindFirstChild("Cutscene")
+                if ImpactCutscene and ImpactCutscene:FindFirstChild("Hurt") then
+                    ImpactCutscene.Hurt.ImageTransparency = 1
                 end
             end
         end
     end)
 end)
 
-if remoteHub and remoteHub:FindFirstChild("Slam") then
-    hookEvent(remoteHub.Slam.OnClientEvent, function(ev)
-        if sessionActive and cfg.barLock and typeof(ev) == "Instance" then
-            pcall(function() ev:FireServer("Perfect") end)
+if RemoteHub and RemoteHub:FindFirstChild("Slam") then
+    HookEvent(RemoteHub.Slam.OnClientEvent, function(Event)
+        if IsSessionActive and Configuration.BarLock and typeof(Event) == "Instance" then
+            pcall(function()
+                Event:FireServer("Perfect")
+            end)
         end
     end)
 end
 
-if remoteHub and remoteHub:FindFirstChild("Charge") then
-    hookEvent(remoteHub.Charge.OnClientEvent, function(ev)
-        if sessionActive and cfg.barLock and typeof(ev) == "Instance" then
-            pcall(function() ev:FireServer(100) end)
+if RemoteHub and RemoteHub:FindFirstChild("Charge") then
+    HookEvent(RemoteHub.Charge.OnClientEvent, function(Event)
+        if IsSessionActive and Configuration.BarLock and typeof(Event) == "Instance" then
+            pcall(function()
+                Event:FireServer(100)
+            end)
         end
     end)
 end
 
-hookEvent(UserInputService.JumpRequest, function()
-    if cfg.moonJump and sessionActive then
-        local hum = lp.Character and lp.Character:FindFirstChildOfClass("Humanoid")
-        if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
+HookEvent(UserInputService.JumpRequest, function()
+    if Configuration.MoonJump and IsSessionActive then
+        local Humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if Humanoid then
+            Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+        end
     end
 end)
 
 pcall(function()
-    lp.Idled:Connect(function()
-        if cfg.idleGuard and sessionActive then
-            local vu = game:GetService("VirtualUser")
-            if vu then
-                vu:CaptureController()
-                vu:ClickButton2(Vector2.new(0, 0))
+    LocalPlayer.Idled:Connect(function()
+        if Configuration.IdleGuard and IsSessionActive then
+            local VirtualUser = game:GetService("VirtualUser")
+            if VirtualUser then
+                VirtualUser:CaptureController()
+                VirtualUser:ClickButton2(Vector2.new(0, 0))
             end
         end
     end)
 end)
 
-hookEvent(RunService.RenderStepped, function()
-    if not sessionActive then return end
+-- Visual Loop
+HookEvent(RunService.RenderStepped, function()
+    if not IsSessionActive then
+        return
+    end
 
-    if cfg.maxBright then
+    if Configuration.MaxBright then
         Lighting.Brightness = 2.5
         Lighting.ClockTime = 14
         Lighting.FogEnd = 1000000
@@ -1909,131 +2048,152 @@ hookEvent(RunService.RenderStepped, function()
         Lighting.OutdoorAmbient = Color3.fromRGB(180, 180, 180)
     end
 
-    if cfg.clearFog then
+    if Configuration.ClearFog then
         Lighting.FogEnd = 1000000
         Lighting.FogStart = 1000000
-        local atmo = Lighting:FindFirstChildWhichIsA("Atmosphere")
-        if atmo and (atmo.Density > 0 or atmo.Haze > 0) then
-            atmo.Density = 0; atmo.Haze = 0; atmo.Glare = 0
+        local Atmosphere = Lighting:FindFirstChildWhichIsA("Atmosphere")
+        if Atmosphere and (Atmosphere.Density > 0 or Atmosphere.Haze > 0) then
+            Atmosphere.Density = 0
+            Atmosphere.Haze = 0
+            Atmosphere.Glare = 0
         end
-        for _, d in ipairs(cam:GetDescendants()) do
-            if d:IsA("ParticleEmitter") and d.Enabled then d.Enabled = false end
+        for _, Descendant in Camera:QueryDescendants("ParticleEmitter") do
+            if Descendant.Enabled then
+                Descendant.Enabled = false
+            end
         end
     end
 
-    for _, p in ipairs(Players:GetPlayers()) do
-        if p ~= lp and p.Character then
-            local hrp = p.Character:FindFirstChild("HumanoidRootPart")
-            if hrp then attachMarker(p.Character, p.DisplayName, "markerPlayers", Color3.fromRGB(255, 255, 255)) end
+    for _, Player in Players:GetPlayers() do
+        if Player ~= LocalPlayer and Player.Character then
+            local RootPart = Player.Character:FindFirstChild("HumanoidRootPart")
+            if RootPart then
+                AttachMarker(Player.Character, Player.DisplayName, "MarkerPlayers", Color3.fromRGB(255, 255, 255))
+            end
         end
     end
 
     if Workspace:FindFirstChild("SecretRod") then
-        for _, r in ipairs(Workspace.SecretRod:GetChildren()) do
-            attachMarker(r, r.Name, "markerRod", Color3.fromRGB(255, 255, 255))
+        for _, Rod in Workspace.SecretRod:QueryDescendants("> Instance") do
+            AttachMarker(Rod, Rod.Name, "MarkerRod", Color3.fromRGB(255, 255, 255))
         end
     end
 
     if Workspace:FindFirstChild("NPC") then
-        local sp = Workspace.NPC:FindFirstChild("Spirit") or Workspace.NPC:FindFirstChild("God")
-        if sp then attachMarker(sp, "God Spirit", "markerSpirit", Color3.fromRGB(255, 255, 255)) end
+        local Spirit = Workspace.NPC:FindFirstChild("Spirit") or Workspace.NPC:FindFirstChild("God")
+        if Spirit then
+            AttachMarker(Spirit, "God Spirit", "MarkerSpirit", Color3.fromRGB(255, 255, 255))
+        end
     end
 
     if Workspace:FindFirstChild("Boat") then
-        for _, b in ipairs(Workspace.Boat:GetChildren()) do
-            attachMarker(b, b.Name, "markerBoat", Color3.fromRGB(255, 255, 255))
+        for _, Boat in Workspace.Boat:QueryDescendants("> Instance") do
+            AttachMarker(Boat, Boat.Name, "MarkerBoat", Color3.fromRGB(255, 255, 255))
         end
     end
 
     if Workspace:FindFirstChild("BossSetUp") then
-        for _, b in ipairs(Workspace.BossSetUp:GetChildren()) do
-            attachMarker(b, b.Name, "markerBoss", Color3.fromRGB(255, 255, 255))
+        for _, Boss in Workspace.BossSetUp:QueryDescendants("> Instance") do
+            AttachMarker(Boss, Boss.Name, "MarkerBoss", Color3.fromRGB(255, 255, 255))
         end
     end
 
     if Workspace:FindFirstChild("NPC") then
-        for _, n in ipairs(Workspace.NPC:GetChildren()) do
-            if n.Name:find("Taoist") or n.Name:find("Grand Angler") then
-                attachMarker(n, n.Name, "markerTaoist", Color3.fromRGB(255, 255, 255))
-            elseif n.Name:find("Maoshan") then
-                attachMarker(n, n.Name, "markerMaoshan", Color3.fromRGB(255, 255, 255))
+        for _, NPC in Workspace.NPC:QueryDescendants("> Instance") do
+            if NPC.Name:find("Taoist") or NPC.Name:find("Grand Angler") then
+                AttachMarker(NPC, NPC.Name, "MarkerTaoist", Color3.fromRGB(255, 255, 255))
+            elseif NPC.Name:find("Maoshan") then
+                AttachMarker(NPC, NPC.Name, "MarkerMaoshan", Color3.fromRGB(255, 255, 255))
             end
         end
     end
 
-    local camPos = cam.CFrame.Position
-    for inst, data in pairs(trackedMarkers) do
-        if not inst.Parent or not data.anchor.Parent then
-            detachMarker(inst)
+    local CameraPosition = Camera.CFrame.Position
+    for MarkerTarget, MarkerData in TrackedMarkers do
+        if not MarkerTarget.Parent or not MarkerData.Anchor.Parent then
+            DetachMarker(MarkerTarget)
         else
-            local enabled = cfg[data.category]
-            data.gui.Enabled = enabled and true or false
-            if enabled then
-                local dist = math.floor((camPos - data.anchor.Position).Magnitude)
-                data.text.Text = data.tag .. " [" .. dist .. "m]"
+            local Enabled = Configuration[MarkerData.Category]
+            MarkerData.Gui.Enabled = Enabled and true or false
+            if Enabled then
+                local Distance = math.floor((CameraPosition - MarkerData.Anchor.Position).Magnitude)
+                MarkerData.Text.Text = MarkerData.Tag .. " [" .. Distance .. "m]"
             end
         end
     end
 
-    if cfg.hookRing then
-        local fishPos = nil
-        local ch = lp.Character
-        if ch then
-            for _, d in ipairs(ch:GetDescendants()) do
-                if (d:IsA("Beam") or d:IsA("RopeConstraint") or d:IsA("SpringConstraint")) and d.Attachment1 then
-                    fishPos = d.Attachment1.WorldPosition
+    if Configuration.HookRing then
+        local FishPosition = nil
+        local Character = LocalPlayer.Character
+        if Character then
+            for _, Descendant in Character:QueryDescendants("Beam, RopeConstraint, SpringConstraint") do
+                if Descendant.Attachment1 then
+                    FishPosition = Descendant.Attachment1.WorldPosition
                     break
                 end
             end
         end
-        if not fishPos and Workspace:FindFirstChild("Fishes") then
-            local uid = tostring(lp.UserId)
-            for _, f in ipairs(Workspace.Fishes:GetChildren()) do
-                if f:FindFirstChild(uid .. "_PlayerHealth") then
-                    if f:FindFirstChild("Model") and f.Model:IsA("Model") then
-                        fishPos = f.Model:GetPivot().Position
-                    elseif f:FindFirstChild("Buoy") and f.Buoy:IsA("BasePart") then
-                        fishPos = f.Buoy.Position
+        if not FishPosition and Workspace:FindFirstChild("Fishes") then
+            local UserId = tostring(LocalPlayer.UserId)
+            for _, Fish in Workspace.Fishes:QueryDescendants("> Instance") do
+                if Fish:FindFirstChild(UserId .. "_PlayerHealth") then
+                    if Fish:FindFirstChild("Model") and Fish.Model:IsA("Model") then
+                        FishPosition = Fish.Model:GetPivot().Position
+                    elseif Fish:FindFirstChild("Buoy") and Fish.Buoy:IsA("BasePart") then
+                        FishPosition = Fish.Buoy.Position
                     end
                     break
                 end
             end
         end
 
-        local pg = lp:FindFirstChild("PlayerGui")
-        local isHooked = ch and (ch:GetAttribute("Fishing") == true or ch:GetAttribute("Minigame") == true)
-        local fPanel = pg and pg:FindFirstChild("MainGui") and pg.MainGui:FindFirstChild("Fishing")
-        if (isHooked or (fPanel and fPanel.Visible)) and fishPos then
-            ringBase.Position = fishPos
-            ringVisual.Visible = true
+        local PlayerGui = LocalPlayer:FindFirstChild("PlayerGui")
+        local IsHooked = Character and (Character:GetAttribute("Fishing") == true or Character:GetAttribute("Minigame") == true)
+        local FishingPanel = PlayerGui and PlayerGui:FindFirstChild("MainGui") and PlayerGui.MainGui:FindFirstChild("Fishing")
+        if (IsHooked or (FishingPanel and FishingPanel.Visible)) and FishPosition then
+            RingBase.Position = FishPosition
+            RingVisual.Visible = true
         else
-            ringVisual.Visible = false
+            RingVisual.Visible = false
         end
     else
-        if ringVisual.Visible then ringVisual.Visible = false end
+        if RingVisual.Visible then
+            RingVisual.Visible = false
+        end
     end
 end)
 
-local function shutdownDrift()
-    sessionActive = false
-    for _, conn in ipairs(eventLinks) do pcall(function() conn:Disconnect() end) end
-    table.clear(eventLinks)
-
-    for _, inst in ipairs(managedObjects) do
+-- Cleanup
+local function ShutdownDrift()
+    IsSessionActive = false
+    for _, Connection in EventLinks do
         pcall(function()
-            if inst and inst.Parent then inst:Destroy() end
+            Connection:Disconnect()
         end)
     end
-    table.clear(managedObjects)
+    table.clear(EventLinks)
+
+    for _, TrackedObject in ManagedObjects do
+        pcall(function()
+            if TrackedObject and TrackedObject.Parent then
+                TrackedObject:Destroy()
+            end
+        end)
+    end
+    table.clear(ManagedObjects)
 
     pcall(function()
-        local leftover = Workspace:FindFirstChild("DriftESP")
-        if leftover then leftover:Destroy() end
+        local Leftover = Workspace:FindFirstChild("DriftESP")
+        if Leftover then
+            Leftover:Destroy()
+        end
     end)
 
     pcall(function()
-        local hum = lp.Character and lp.Character:FindFirstChildOfClass("Humanoid")
-        if hum then hum.WalkSpeed = 16 end
+        local Humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if Humanoid then
+            Humanoid.WalkSpeed = 16
+        end
         Lighting.FogEnd = 100000
         Lighting.Brightness = 2
         Lighting.ClockTime = 14
@@ -2042,39 +2202,43 @@ local function shutdownDrift()
         Lighting.GlobalShadows = true
     end)
 
-    if getgenv then getgenv().DriftActiveSession = nil end
+    if getgenv then
+        Environment.DriftActiveSession = nil
+    end
 end
 
-getgenv().DriftActiveSession = shutdownDrift
+Environment.DriftActiveSession = ShutdownDrift
 
 Library:OnUnload(function()
-    shutdownDrift()
+    ShutdownDrift()
 end)
 
+-- Loaded Notification
 Library:Notify({
-	Title = "Drift",
-	Description = "Loaded successfully",
-	Time = 5,
+    Title = "Drift",
+    Description = "Loaded successfully",
+    Time = 5,
 })
 setclipboard("dsc.gg/getdrift")
 Library:Notify({
-	Title = "Drift",
-	Description = "Copied Discord Link",
-	Time = 5,
+    Title = "Drift",
+    Description = "Copied Discord Link",
+    Time = 5,
 })
 
-local __ContribSrc = game:HttpGet("https://raw.githubusercontent.com/cryp1t/Drift/refs/heads/main/Contributors.luau")
-local __Team, __GameContribs = loadstring(__ContribSrc)()
+-- Credits
+local ContributorsSource = game:HttpGet("https://raw.githubusercontent.com/cryp1t/Drift/refs/heads/main/Contributors.luau")
+local TeamMembers, GameContributors = loadstring(ContributorsSource)()
 
-local __DevBox = Tabs["UI Settings"]:AddLeftGroupbox("Team", "wrench")
-for __name, __role in pairs(__Team) do
-    __DevBox:AddLabel("[<font color=\"rgb(255, 255, 100)\">" .. __name .. "</font>] " .. __role)
+local TeamGroup = Tabs["UI Settings"]:AddLeftGroupbox("Team", "wrench")
+for MemberName, MemberRole in TeamMembers do
+    TeamGroup:AddLabel("[<font color=\"rgb(255, 255, 100)\">" .. MemberName .. "</font>] " .. MemberRole)
 end
 
-local __placeId = tostring(game.PlaceId)
-if __GameContribs[__placeId] then
-    local __ContBox = Tabs["UI Settings"]:AddRightGroupbox("Contributors", "users")
-    for __name, __contribution in pairs(__GameContribs[__placeId]) do
-        __ContBox:AddLabel("[<font color=\"rgb(255, 255, 100)\">" .. __name .. "</font>] " .. __contribution)
+local PlaceId = tostring(game.PlaceId)
+if GameContributors[PlaceId] then
+    local ContributorsGroup = Tabs["UI Settings"]:AddRightGroupbox("Contributors", "users")
+    for MemberName, Contribution in GameContributors[PlaceId] do
+        ContributorsGroup:AddLabel("[<font color=\"rgb(255, 255, 100)\">" .. MemberName .. "</font>] " .. Contribution)
     end
 end

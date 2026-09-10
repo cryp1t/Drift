@@ -1,8 +1,6 @@
--- grow a garden 2 
+-- Services
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 local CollectionService = game:GetService("CollectionService")
 local HttpService = game:GetService("HttpService")
@@ -11,6 +9,8 @@ local VirtualUser = game:GetService("VirtualUser")
 local LocalPlayer = Players.LocalPlayer
 local SharedModules = ReplicatedStorage:WaitForChild("SharedModules")
 local Networking = require(SharedModules:WaitForChild("Networking"))
+
+-- Constants
 local SingleHarvestSeeds = {
 	Carrot = true, Tulip = true, Bamboo = true, Mushroom = true,
 }
@@ -26,6 +26,8 @@ local Seeds = {
 local Eggs = {
 	"Common Egg","Uncommon Egg","Rare Egg","Legendary Egg","Mythical Egg","Bug Egg"
 }
+
+-- Configuration
 local State = {
 	AutoCollect = false,
 	AutoSell = false,
@@ -43,574 +45,766 @@ local State = {
 	CollectInterval = 0.5,
 	StealPerSession = 30,
 }
-local function isNight()
-	local nightVal = ReplicatedStorage:FindFirstChild("Night")
-	return nightVal and nightVal.Value == true
+
+-- Garden Utilities
+local function IsNight()
+	local NightValue = ReplicatedStorage:FindFirstChild("Night")
+	if not NightValue then
+		return false
+	end
+	return NightValue.Value == true
 end
-local function getMyGarden()
-	local gardens = Workspace:FindFirstChild("Gardens")
-	if not gardens then return nil end
-	local plotId = LocalPlayer:GetAttribute("PlotId")
-	if plotId then
-		local g = gardens:FindFirstChild("Plot" .. tostring(plotId))
-		if g then return g end
+
+local function GetMyGarden()
+	local Gardens = Workspace:FindFirstChild("Gardens")
+	if not Gardens then
+		return nil
 	end
-	for _, g in ipairs(gardens:GetChildren()) do
-		if tonumber(g:GetAttribute("OwnerUserId")) == LocalPlayer.UserId then
-			return g
+
+	local PlotId = LocalPlayer:GetAttribute("PlotId")
+	if PlotId then
+		local GardenPlot = Gardens:FindFirstChild("Plot" .. tostring(PlotId))
+		if GardenPlot then
+			return GardenPlot
 		end
 	end
-	for _, g in ipairs(gardens:GetChildren()) do
-		local ov = g:FindFirstChild("Owner", true)
-		if ov then
-			if ov:IsA("ObjectValue") and ov.Value == LocalPlayer then return g end
-			if ov:IsA("StringValue") and ov.Value == LocalPlayer.Name then return g end
+
+	for _, Garden in Gardens:QueryDescendants("> Instance") do
+		if tonumber(Garden:GetAttribute("OwnerUserId")) == LocalPlayer.UserId then
+			return Garden
 		end
-		if g:GetAttribute("Owner") == LocalPlayer.Name then return g end
 	end
+
+	for _, Garden in Gardens:QueryDescendants("> Instance") do
+		local OwnerValue = Garden:FindFirstChild("Owner", true)
+		if OwnerValue then
+			if OwnerValue:IsA("ObjectValue") and OwnerValue.Value == LocalPlayer then
+				return Garden
+			end
+			if OwnerValue:IsA("StringValue") and OwnerValue.Value == LocalPlayer.Name then
+				return Garden
+			end
+		end
+		if Garden:GetAttribute("Owner") == LocalPlayer.Name then
+			return Garden
+		end
+	end
+
 	return nil
 end
 
-local function getAllGardens()
-	local g = Workspace:FindFirstChild("Gardens")
-	return g and g:GetChildren() or {}
-end
-
-local function getMyGardenSpawnPoint()
-	local g = getMyGarden()
-	if not g then return nil end
-	local sp = g:FindFirstChild("SpawnPoint")
-	if sp and sp:IsA("BasePart") then return sp end
-	local zone = g:FindFirstChild("GardenZonePart", true)
-	if zone and zone:IsA("BasePart") then return zone end
-	local total = g:FindFirstChild("GardenTotalArea", true)
-	if total and total:IsA("BasePart") then return total end
-	return g:FindFirstChildWhichIsA("BasePart")
-end
-
-local function getRoot()
-	local char = LocalPlayer.Character
-	if not char then return nil end
-	return char:FindFirstChild("HumanoidRootPart")
-end
-
-local function getModelPos(model)
-	if not model then return nil end
-	if model:IsA("BasePart") then return model.Position end
-	if model:IsA("Model") then
-		local pp = model.PrimaryPart
-		if pp then return pp.Position end
-		local ok, pv = pcall(model.GetPivot, model)
-		if ok and pv then return pv.Position end
-		local anyPart = model:FindFirstChildWhichIsA("BasePart")
-		if anyPart then return anyPart.Position end
+local function GetAllGardens()
+	local Gardens = Workspace:FindFirstChild("Gardens")
+	if not Gardens then
+		return {}
 	end
+	return Gardens:QueryDescendants("> Instance")
+end
+
+local function GetMyGardenSpawnPoint()
+	local Garden = GetMyGarden()
+	if not Garden then
+		return nil
+	end
+
+	local SpawnPoint = Garden:FindFirstChild("SpawnPoint")
+	if SpawnPoint and SpawnPoint:IsA("BasePart") then
+		return SpawnPoint
+	end
+
+	local ZonePart = Garden:FindFirstChild("GardenZonePart", true)
+	if ZonePart and ZonePart:IsA("BasePart") then
+		return ZonePart
+	end
+
+	local TotalArea = Garden:FindFirstChild("GardenTotalArea", true)
+	if TotalArea and TotalArea:IsA("BasePart") then
+		return TotalArea
+	end
+
+	return Garden:FindFirstChildWhichIsA("BasePart")
+end
+
+-- Character Utilities
+local function GetRoot()
+	local Character = LocalPlayer.Character
+	if not Character then
+		return nil
+	end
+	return Character:FindFirstChild("HumanoidRootPart")
+end
+
+local function GetModelPosition(Model)
+	if not Model then
+		return nil
+	end
+
+	if Model:IsA("BasePart") then
+		return Model.Position
+	end
+
+	if Model:IsA("Model") then
+		local PrimaryPart = Model.PrimaryPart
+		if PrimaryPart then
+			return PrimaryPart.Position
+		end
+
+		local DidSucceed, PivotValue = pcall(Model.GetPivot, Model)
+		if DidSucceed and PivotValue then
+			return PivotValue.Position
+		end
+
+		local AnyPart = Model:FindFirstChildWhichIsA("BasePart")
+		if AnyPart then
+			return AnyPart.Position
+		end
+	end
+
 	return nil
 end
 
-local function isRipe(model)
-	if not model then return false end
-	local age = model:GetAttribute("Age")
-	local maxAge = model:GetAttribute("MaxAge")
-	if typeof(age) == "number" and typeof(maxAge) == "number" then
-		return maxAge <= age
+-- Fruit & Plant Utilities
+local function IsRipe(Model)
+	if not Model then
+		return false
 	end
-	if model:FindFirstChild("HarvestPrompt", true) or model:FindFirstChild("StealPrompt", true) then
+
+	local Age = Model:GetAttribute("Age")
+	local MaxAge = Model:GetAttribute("MaxAge")
+	if typeof(Age) == "number" and typeof(MaxAge) == "number" then
+		return MaxAge <= Age
+	end
+
+	if Model:FindFirstChild("HarvestPrompt", true) or Model:FindFirstChild("StealPrompt", true) then
 		return true
 	end
+
 	return true
 end
 
-local function getFruitEntries(garden)
-	local entries = {}
-	if not garden then return entries end
-	local plants = garden:FindFirstChild("Plants")
-	if not plants then return entries end
-	local myUserId = LocalPlayer.UserId
-	for _, plant in ipairs(plants:GetChildren()) do
-		if plant:IsA("Model") then
-			local plantId = plant:GetAttribute("PlantId")
-			local ownerUserId = tonumber(plant:GetAttribute("UserId"))
-			if typeof(plantId) == "string" and ownerUserId then
-				local seedName = plant:GetAttribute("SeedName")
-				local fruitsFolder = plant:FindFirstChild("Fruits")
-				local isSingle = SingleHarvestSeeds[seedName] == true or fruitsFolder == nil
-				if isSingle then
-					if isRipe(plant) then
-						table.insert(entries, {
-							ownerUserId = ownerUserId,
-							plantId = plantId,
-							fruitId = "",
-							model = plant,
-							ripe = true,
-							isMine = ownerUserId == myUserId,
-							seedName = seedName,
-						})
+local function GetFruitEntries(Garden)
+	local Entries = {}
+	if not Garden then
+		return Entries
+	end
+
+	local Plants = Garden:FindFirstChild("Plants")
+	if not Plants then
+		return Entries
+	end
+
+	local MyUserId = LocalPlayer.UserId
+	for _, Plant in Plants:QueryDescendants("> Model") do
+		local PlantId = Plant:GetAttribute("PlantId")
+		local OwnerUserId = tonumber(Plant:GetAttribute("UserId"))
+		if typeof(PlantId) ~= "string" or not OwnerUserId then
+			continue
+		end
+
+		local SeedName = Plant:GetAttribute("SeedName")
+		local FruitsFolder = Plant:FindFirstChild("Fruits")
+		local IsSingleHarvest = SingleHarvestSeeds[SeedName] == true or FruitsFolder == nil
+
+		if IsSingleHarvest then
+			if IsRipe(Plant) then
+				table.insert(Entries, {
+					ownerUserId = OwnerUserId,
+					plantId = PlantId,
+					fruitId = "",
+					model = Plant,
+					ripe = true,
+					isMine = OwnerUserId == MyUserId,
+					seedName = SeedName,
+				})
+			end
+		else
+			for _, Fruit in FruitsFolder:QueryDescendants("> Model") do
+			local FruitId = Fruit:GetAttribute("FruitId")
+				if typeof(FruitId) == "string" and IsRipe(Fruit) then
+					table.insert(Entries, {
+						ownerUserId = OwnerUserId,
+						plantId = PlantId,
+						fruitId = FruitId,
+						model = Fruit,
+						ripe = true,
+						isMine = OwnerUserId == MyUserId,
+						seedName = SeedName,
+					})
+				end
+			end
+		end
+	end
+
+	return Entries
+end
+
+local function GetPlants(Garden)
+	local List = {}
+	if not Garden then
+		return List
+	end
+
+	local Plants = Garden:FindFirstChild("Plants")
+	if Plants then
+		for _, Plant in Plants:QueryDescendants("> Model") do
+			table.insert(List, Plant)
+		end
+	end
+
+	return List
+end
+
+-- Tool & Seed Utilities
+local function FindToolWithAttribute(AttributeName, AttributeValue)
+	local Containers = {LocalPlayer.Character, LocalPlayer:FindFirstChildOfClass("Backpack")}
+
+	for _, Container in Containers do
+		if Container then
+			for _, Tool in Container:QueryDescendants("> Tool") do
+				local Value = Tool:GetAttribute(AttributeName)
+					if Value and (AttributeValue == nil or Value == AttributeValue) then
+						return Tool
 					end
-				else
-					for _, fruit in ipairs(fruitsFolder:GetChildren()) do
-						if fruit:IsA("Model") then
-							local fid = fruit:GetAttribute("FruitId")
-							if typeof(fid) == "string" and isRipe(fruit) then
-								table.insert(entries, {
-									ownerUserId = ownerUserId,
-									plantId = plantId,
-									fruitId = fid,
-									model = fruit,
-									ripe = true,
-									isMine = ownerUserId == myUserId,
-									seedName = seedName,
-								})
-							end
-						end
-					end
 				end
 			end
 		end
 	end
-	return entries
+
+	return nil
 end
 
-local function getPlants(garden)
-	local list = {}
-	if not garden then return list end
-	local plants = garden:FindFirstChild("Plants")
-	if plants then
-		for _, p in ipairs(plants:GetChildren()) do
-			if p:IsA("Model") then table.insert(list, p) end
-		end
+-- Fire Rate Tracking
+local LastFireTime = {}
+
+-- Garden Collection
+local function CollectGarden(Garden)
+	if not Garden then
+		return
 	end
-	return list
-end
 
-local function findToolWithAttribute(attrName, attrValue)
-	local function search(container)
-		if not container then return nil end
-		for _, tool in ipairs(container:GetChildren()) do
-			if tool:IsA("Tool") then
-				local val = tool:GetAttribute(attrName)
-				if val and (attrValue == nil or val == attrValue) then
-					return tool
-				end
-			end
+	local Now = os.clock()
+	local FiredCount = 0
+
+	for _, Entry in GetFruitEntries(Garden) do
+		if not Entry.isMine or not Entry.ripe then
+			continue
 		end
-		return nil
-	end
-	local char = LocalPlayer.Character
-	local result = search(char)
-	if result then return result end
-	return search(LocalPlayer:FindFirstChildOfClass("Backpack"))
-end
-local lastFire = {}
 
+		local Key = "c_" .. Entry.plantId .. "_" .. Entry.fruitId
+		local LastTime = LastFireTime[Key] or 0
+		if Now - LastTime < 2 then
+			continue
+		end
 
-local function collectGarden(garden)
-	if not garden then return end
-	local now = os.clock()
-	local fired = 0
-	for _, e in ipairs(getFruitEntries(garden)) do
-		if e.isMine and e.ripe then
-			local key = "c_" .. e.plantId .. "_" .. e.fruitId
-			local last = lastFire[key] or 0
-			if now - last >= 2 then
-				lastFire[key] = now
-				pcall(function() Networking.Garden.CollectFruit:Fire(e.plantId, e.fruitId) end)
-				fired = fired + 1
-				if fired >= 5 then
-					task.wait(0.5)
-					fired = 0
-				else
-					task.wait(0.1)
-				end
-			end
+		LastFireTime[Key] = Now
+		pcall(function() Networking.Garden.CollectFruit:Fire(Entry.plantId, Entry.fruitId) end)
+		FiredCount = FiredCount + 1
+
+		if FiredCount >= 5 then
+			task.wait(0.5)
+			FiredCount = 0
+		else
+			task.wait(0.1)
 		end
 	end
 end
-local function sellAll()
+
+local function SellAll()
 	pcall(function() Networking.NPCS.SellAll:Fire() end)
 end
 
-local function buySeed(name)
-	pcall(function() Networking.SeedShop.PurchaseSeed:Fire(name) end)
+local function BuySeed(Name)
+	pcall(function() Networking.SeedShop.PurchaseSeed:Fire(Name) end)
 end
 
-local function buyEgg(name)
-	pcall(function() Networking.Egg.OpenEgg:Fire(name) end)
+local function BuyEgg(Name)
+	pcall(function() Networking.Egg.OpenEgg:Fire(Name) end)
 end
 
-local function getPlantAreasInGarden(garden)
-	if not garden then return {} end
-	local areas = {}
-	for _, part in CollectionService:GetTagged("PlantArea") do
-		if part:IsDescendantOf(garden) and part:IsA("BasePart") then
-			table.insert(areas, part)
+-- Planting Utilities
+local function GetPlantAreasInGarden(Garden)
+	if not Garden then
+		return {}
+	end
+
+	local Areas = {}
+	for _, Part in CollectionService:GetTagged("PlantArea") do
+		if Part:IsDescendantOf(Garden) and Part:IsA("BasePart") then
+			table.insert(Areas, Part)
 		end
 	end
-	if #areas == 0 then
-		for _, child in ipairs(garden:GetDescendants()) do
-			if child:IsA("BasePart") and child.Name:lower():find("plantarea") then
-				table.insert(areas, child)
+
+	if #Areas == 0 then
+		for _, Child in Garden:QueryDescendants("BasePart") do
+			if Child.Name:lower():find("plantarea") then
+				table.insert(Areas, Child)
 			end
 		end
 	end
-	return areas
+
+	return Areas
 end
 
-local function isPositionOccupied(garden, pos, radius)
-	radius = radius or 1.5
-	for _, plant in ipairs(getPlants(garden)) do
-		local base = plant.PrimaryPart or plant:FindFirstChildWhichIsA("BasePart")
-		if base then
-			local vec = Vector2.new(pos.X - base.Position.X, pos.Z - base.Position.Z)
-			if vec.Magnitude < radius then
+local function IsPositionOccupied(Garden, Position, Radius)
+	Radius = Radius or 1.5
+
+	for _, Plant in GetPlants(Garden) do
+		local BasePart = Plant.PrimaryPart or Plant:FindFirstChildWhichIsA("BasePart")
+		if BasePart then
+			local Offset = Vector2.new(Position.X - BasePart.Position.X, Position.Z - BasePart.Position.Z)
+			if Offset.Magnitude < Radius then
 				return true
 			end
 		end
 	end
+
 	return false
 end
 
-local function getAvailableSeeds()
-	local seedsFound = {}
-	local function scan(container)
-		if not container then return end
-		for _, tool in ipairs(container:GetChildren()) do
-			if tool:IsA("Tool") then
-				local seedName = tool:GetAttribute("SeedTool")
-				if seedName and not seedsFound[seedName] then
-					seedsFound[seedName] = true
+local function GetAvailableSeeds()
+	local SeedsFound = {}
+	local Containers = {LocalPlayer.Character, LocalPlayer:FindFirstChildOfClass("Backpack")}
+
+	for _, Container in Containers do
+		if Container then
+			for _, Tool in Container:QueryDescendants("> Tool") do
+				local SeedName = Tool:GetAttribute("SeedTool")
+					if SeedName and not SeedsFound[SeedName] then
+						SeedsFound[SeedName] = true
+					end
 				end
 			end
 		end
 	end
-	scan(LocalPlayer.Character)
-	scan(LocalPlayer:FindFirstChildOfClass("Backpack"))
-	local list = {}
-	for k in pairs(seedsFound) do table.insert(list, k) end
-	return list
-end
 
-local function resolvePlantSeed()
-	local avail = getAvailableSeeds()
-	if #avail == 0 then return nil end
-	for _, name in ipairs(avail) do
-		if name == State.SelectedSeed then return name end
+	local List = {}
+	for SeedName in SeedsFound do
+		table.insert(List, SeedName)
 	end
-	return avail[1]
+	return List
 end
 
-local function plantSeed(name)
-	if not name or name == "" then return end
-	local garden = getMyGarden()
-	if not garden then return end
-	local plotRef = garden:FindFirstChild("PlotSizeReference")
-	if not plotRef or not plotRef:IsA("BasePart") then
-		plotRef = garden:FindFirstChild("GardenTotalArea", true)
-		if not plotRef or not plotRef:IsA("BasePart") then
+local function ResolvePlantSeed()
+	local AvailableSeeds = GetAvailableSeeds()
+	if #AvailableSeeds == 0 then
+		return nil
+	end
+
+	for _, SeedName in AvailableSeeds do
+		if SeedName == State.SelectedSeed then
+			return SeedName
+		end
+	end
+
+	return AvailableSeeds[1]
+end
+
+local function PlantSeed(Name)
+	if not Name or Name == "" then
+		return
+	end
+
+	local Garden = GetMyGarden()
+	if not Garden then
+		return
+	end
+
+	local PlotReference = Garden:FindFirstChild("PlotSizeReference")
+	if not PlotReference or not PlotReference:IsA("BasePart") then
+		PlotReference = Garden:FindFirstChild("GardenTotalArea", true)
+		if not PlotReference or not PlotReference:IsA("BasePart") then
 			return
 		end
 	end
-	local plantAreas = getPlantAreasInGarden(garden)
-	if #plantAreas == 0 then
-		plantAreas = { plotRef }
+
+	local PlantAreas = GetPlantAreasInGarden(Garden)
+	if #PlantAreas == 0 then
+		PlantAreas = { PlotReference }
 	end
-	local planted = 0
-	local gridStep = 2.5
-	for _, area in ipairs(plantAreas) do
-		local marginX = math.min(area.Size.X * 0.15, 4)
-		local marginZ = math.min(area.Size.Z * 0.15, 4)
-		local halfX = area.Size.X / 2 - marginX
-		local halfZ = area.Size.Z / 2 - marginZ
-		if halfX < 0 or halfZ < 0 then
-			halfX = math.max(area.Size.X / 4, 1)
-			halfZ = math.max(area.Size.Z / 4, 1)
+
+	local PlantedCount = 0
+	local GridStep = 2.5
+
+	for _, Area in PlantAreas do
+		local MarginX = math.min(Area.Size.X * 0.15, 4)
+		local MarginZ = math.min(Area.Size.Z * 0.15, 4)
+		local HalfX = Area.Size.X / 2 - MarginX
+		local HalfZ = Area.Size.Z / 2 - MarginZ
+
+		if HalfX < 0 or HalfZ < 0 then
+			HalfX = math.max(Area.Size.X / 4, 1)
+			HalfZ = math.max(Area.Size.Z / 4, 1)
 		end
-		for xOff = -halfX, halfX, gridStep do
-			for zOff = -halfZ, halfZ, gridStep do
-				local worldPos = area.CFrame:PointToWorldSpace(Vector3.new(xOff, area.Size.Y / 2 + 0.2, zOff))
-				if not isPositionOccupied(garden, worldPos, 1.8) then
+
+		for XOffset = -HalfX, HalfX, GridStep do
+			for ZOffset = -HalfZ, HalfZ, GridStep do
+				local WorldPosition = Area.CFrame:PointToWorldSpace(Vector3.new(XOffset, Area.Size.Y / 2 + 0.2, ZOffset))
+				if not IsPositionOccupied(Garden, WorldPosition, 1.8) then
 					pcall(function()
-						Networking.Plant.PlantSeed:Fire(worldPos, name, plotRef)
+						Networking.Plant.PlantSeed:Fire(WorldPosition, Name, PlotReference)
 					end)
-					planted = planted + 1
+					PlantedCount = PlantedCount + 1
 					task.wait(0.2)
-					if planted >= 10 then return end
+					if PlantedCount >= 10 then
+						return
+					end
 				end
 			end
 		end
 	end
 end
 
-local function waterAll()
-	local garden = getMyGarden()
-	if not garden then return end
-	local tool = findToolWithAttribute("WateringCan")
-	if not tool then
-		local char = LocalPlayer.Character
-		if char then tool = char:FindFirstChildOfClass("Tool") end
-		if not tool then
-			local backpack = LocalPlayer:FindFirstChildOfClass("Backpack")
-			if backpack then tool = backpack:FindFirstChildOfClass("Tool") end
+-- Watering
+local function WaterAll()
+	local Garden = GetMyGarden()
+	if not Garden then
+		return
+	end
+
+	local Tool = FindToolWithAttribute("WateringCan")
+	if not Tool then
+		local Character = LocalPlayer.Character
+		if Character then
+			Tool = Character:FindFirstChildOfClass("Tool")
+		end
+		if not Tool then
+			local Backpack = LocalPlayer:FindFirstChildOfClass("Backpack")
+			if Backpack then
+				Tool = Backpack:FindFirstChildOfClass("Tool")
+			end
 		end
 	end
-	if not tool then return end
-	local wateringCanName = tool:GetAttribute("WateringCan") or "Watering Can"
-	local areas = getPlantAreasInGarden(garden)
-	if #areas == 0 then
-		areas = getPlants(garden)
+
+	if not Tool then
+		return
 	end
-	for _, item in ipairs(areas) do
-		local base = item:IsA("BasePart") and item or (item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart"))
-		if base then
+
+	local WateringCanName = Tool:GetAttribute("WateringCan") or "Watering Can"
+	local Areas = GetPlantAreasInGarden(Garden)
+	if #Areas == 0 then
+		Areas = GetPlants(Garden)
+	end
+
+	for _, Target in Areas do
+		local BasePart = Target:IsA("BasePart") and Target or (Target.PrimaryPart or Target:FindFirstChildWhichIsA("BasePart"))
+		if BasePart then
 			pcall(function()
-				Networking.WateringCan.UseWateringCan:Fire(base.Position - Vector3.new(0, 0.3, 0), wateringCanName, tool)
+				Networking.WateringCan.UseWateringCan:Fire(BasePart.Position - Vector3.new(0, 0.3, 0), WateringCanName, Tool)
 			end)
 			task.wait(0.15)
 		end
 	end
 end
 
-local function isOwnerHome(ownerUserId)
-	local player = Players:GetPlayerByUserId(ownerUserId)
-	if not player then return false end
-	return player:GetAttribute("IsInOwnGarden") == true
-		or player:GetAttribute("InSafeZone") == true
+-- Steal System
+local function IsOwnerHome(OwnerUserId)
+	local Player = Players:GetPlayerByUserId(OwnerUserId)
+	if not Player then
+		return false
+	end
+	return Player:GetAttribute("IsInOwnGarden") == true
+		or Player:GetAttribute("InSafeZone") == true
 end
 
-local function getFruitValue(fruit)
-	local size = fruit:GetAttribute("SizeMulti") or 1
-	local mut = fruit:GetAttribute("Mutation")
-	local core = fruit:GetAttribute("CorePartName")
-	local base = core and 100 or 10
-	local mult = mut and 5 or 1
-	return base * (size ^ 3) * mult
+local function GetFruitValue(Fruit)
+	local SizeMultiplier = Fruit:GetAttribute("SizeMulti") or 1
+	local Mutation = Fruit:GetAttribute("Mutation")
+	local CorePartName = Fruit:GetAttribute("CorePartName")
+	local BaseValue = CorePartName and 100 or 10
+	local Multiplier = Mutation and 5 or 1
+	return BaseValue * (SizeMultiplier ^ 3) * Multiplier
 end
 
-local function findStealPrompt(model)
-	if not model then return nil end
-	local prompt = model:FindFirstChild("StealPrompt", true)
-	if prompt and prompt:IsA("ProximityPrompt") then return prompt end
+local function FindStealPrompt(Model)
+	if not Model then
+		return nil
+	end
+
+	local Prompt = Model:FindFirstChild("StealPrompt", true)
+	if Prompt and Prompt:IsA("ProximityPrompt") then
+		return Prompt
+	end
+
 	return nil
 end
 
-local function waitForStealPrompt(model, timeout)
-	timeout = timeout or 1.5
-	local t0 = os.clock()
-	while os.clock() - t0 < timeout do
-		local prompt = findStealPrompt(model)
-		if prompt then return prompt end
+local function WaitForStealPrompt(Model, Timeout)
+	Timeout = Timeout or 1.5
+	local StartTime = os.clock()
+
+	while os.clock() - StartTime < Timeout do
+		local Prompt = FindStealPrompt(Model)
+		if Prompt then
+			return Prompt
+		end
 		task.wait(0.1)
 	end
-	return findStealPrompt(model)
+
+	return FindStealPrompt(Model)
 end
 
-local function findBestStealTarget()
-	local best, bestVal = nil, -1
-	local now = os.clock()
-	for _, garden in ipairs(getAllGardens()) do
-		local ownerUid = tonumber(garden:GetAttribute("OwnerUserId"))
-		if ownerUid and ownerUid ~= LocalPlayer.UserId then
-			for _, e in ipairs(getFruitEntries(garden)) do
-				if not e.isMine and e.ripe and not isOwnerHome(e.ownerUserId) then
-					local key = "s_" .. e.ownerUserId .. "_" .. e.plantId .. "_" .. e.fruitId
-					if (now - (lastFire[key] or 0)) >= 10 then
-						local v = getFruitValue(e.model)
-						if v > bestVal then
-							bestVal = v
-							best = e
-							best._key = key
-						end
-					end
-				end
+local function FindBestStealTarget()
+	local BestTarget, BestValue = nil, -1
+	local Now = os.clock()
+
+	for _, Garden in GetAllGardens() do
+		local OwnerUserId = tonumber(Garden:GetAttribute("OwnerUserId"))
+		if not OwnerUserId or OwnerUserId == LocalPlayer.UserId then
+			continue
+		end
+
+		for _, Entry in GetFruitEntries(Garden) do
+			if Entry.isMine or not Entry.ripe or IsOwnerHome(Entry.ownerUserId) then
+				continue
+			end
+
+			local Key = "s_" .. Entry.ownerUserId .. "_" .. Entry.plantId .. "_" .. Entry.fruitId
+			if (Now - (LastFireTime[Key] or 0)) < 10 then
+				continue
+			end
+
+			local FruitValue = GetFruitValue(Entry.model)
+			if FruitValue > BestValue then
+				BestValue = FruitValue
+				BestTarget = Entry
+				BestTarget.Key = Key
 			end
 		end
 	end
-	return best
+
+	return BestTarget
 end
 
-local stealBusy = false
-local function stealAndSell()
-	if stealBusy then return end
-	if not isNight() then return end
-	local root = getRoot()
-	if not root then return end
-	local mySpawn = getMyGardenSpawnPoint()
-	if not mySpawn then return end
+local IsStealingBusy = false
 
-	stealBusy = true
-	local startPos = root.CFrame
-	local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-	local startWS = hum and hum.WalkSpeed
-	local startJP = hum and hum.JumpPower
+local function StealAndSell()
+	if IsStealingBusy then
+		return
+	end
+	if not IsNight() then
+		return
+	end
 
-	local stolen, failStreak = 0, 0
-	local success, err = pcall(function()
-		while State.AutoStealSell and isNight() and stolen < State.StealPerSession and failStreak < 5 do
-			local target = findBestStealTarget()
-			if not target then break end
+	local Root = GetRoot()
+	if not Root then
+		return
+	end
 
-			lastFire[target._key] = os.clock()
+	local MySpawn = GetMyGardenSpawnPoint()
+	if not MySpawn then
+		return
+	end
 
-			local pos = getModelPos(target.model)
-			if pos then
-				local clearStart = os.clock()
-				while LocalPlayer:GetAttribute("IsStealingFruit") == true
-					and os.clock() - clearStart < 3 do
+	IsStealingBusy = true
+	local StartPosition = Root.CFrame
+	local Humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+	local OriginalWalkSpeed = Humanoid and Humanoid.WalkSpeed
+	local OriginalJumpPower = Humanoid and Humanoid.JumpPower
+
+	local StolenCount, FailStreak = 0, 0
+	local DidSucceed, ErrorMessage = pcall(function()
+		while State.AutoStealSell and IsNight() and StolenCount < State.StealPerSession and FailStreak < 5 do
+			local Target = FindBestStealTarget()
+			if not Target then
+				break
+			end
+
+			LastFireTime[Target.Key] = os.clock()
+
+			local Position = GetModelPosition(Target.model)
+			if not Position then
+				FailStreak = FailStreak + 1
+				task.wait(1)
+				continue
+			end
+
+			local ClearStartTime = os.clock()
+			while LocalPlayer:GetAttribute("IsStealingFruit") == true
+				and os.clock() - ClearStartTime < 3 do
+				task.wait(0.2)
+			end
+
+			Root.CFrame = CFrame.new(Position + Vector3.new(0, 3, 0))
+			task.wait(0.5)
+
+			local Prompt = WaitForStealPrompt(Target.model, 2)
+			local HoldDuration = 0
+			if Prompt then
+				HoldDuration = Prompt.HoldDuration or 0
+			end
+
+			if HoldDuration == 0 then
+				pcall(function() Networking.Steal.BeginSteal:Fire(Target.ownerUserId, Target.plantId, Target.fruitId) end)
+				task.wait(0.1)
+				pcall(function() Networking.Steal.CompleteSteal:Fire() end)
+			else
+				pcall(function() Networking.Steal.BeginSteal:Fire(Target.ownerUserId, Target.plantId, Target.fruitId) end)
+				task.wait(HoldDuration + 0.2)
+				pcall(function() Networking.Steal.CompleteSteal:Fire() end)
+			end
+
+			task.wait(0.5)
+
+			if LocalPlayer:GetAttribute("CarryingStolenFruit") == true then
+				Root.CFrame = MySpawn.CFrame * CFrame.new(0, 3, 0)
+				task.wait(0.5)
+
+				local WaitStartTime = os.clock()
+				while State.AutoStealSell
+					and LocalPlayer:GetAttribute("CarryingStolenFruit") == true
+					and os.clock() - WaitStartTime < 5 do
 					task.wait(0.2)
 				end
 
-				root.CFrame = CFrame.new(pos + Vector3.new(0, 3, 0))
-				task.wait(0.5)
+				task.wait(1.5)
 
-				local prompt = waitForStealPrompt(target.model, 2)
-				local holdDuration = 0
-				if prompt then
-					holdDuration = prompt.HoldDuration or 0
-				end
-
-				if holdDuration == 0 then
-					pcall(function() Networking.Steal.BeginSteal:Fire(target.ownerUserId, target.plantId, target.fruitId) end)
-					task.wait(0.1)
-					pcall(function() Networking.Steal.CompleteSteal:Fire() end)
+				if LocalPlayer:GetAttribute("CarryingStolenFruit") ~= true then
+					StolenCount = StolenCount + 1
+					FailStreak = 0
 				else
-					pcall(function() Networking.Steal.BeginSteal:Fire(target.ownerUserId, target.plantId, target.fruitId) end)
-					task.wait(holdDuration + 0.2)
-					pcall(function() Networking.Steal.CompleteSteal:Fire() end)
-				end
-				task.wait(0.5)
-
-				if LocalPlayer:GetAttribute("CarryingStolenFruit") == true then
-					root.CFrame = mySpawn.CFrame * CFrame.new(0, 3, 0)
-					task.wait(0.5)
-					local t0 = os.clock()
-					while State.AutoStealSell
-						and LocalPlayer:GetAttribute("CarryingStolenFruit") == true
-						and os.clock() - t0 < 5 do
-						task.wait(0.2)
-					end
-					task.wait(1.5)
-					if LocalPlayer:GetAttribute("CarryingStolenFruit") ~= true then
-						stolen = stolen + 1
-						failStreak = 0
-					else
-						failStreak = failStreak + 1
-					end
-				else
-					failStreak = failStreak + 1
+					FailStreak = FailStreak + 1
 				end
 			else
-				failStreak = failStreak + 1
+				FailStreak = FailStreak + 1
 			end
 
 			task.wait(1)
 		end
 	end)
 
-	if hum then
-		pcall(function() hum.WalkSpeed = startWS or 16 end)
-		pcall(function() hum.JumpPower = startJP or 50 end)
+	if Humanoid then
+		pcall(function() Humanoid.WalkSpeed = OriginalWalkSpeed or 16 end)
+		pcall(function() Humanoid.JumpPower = OriginalJumpPower or 50 end)
 	end
-	pcall(function() root.CFrame = startPos end)
-	stealBusy = false
+
+	pcall(function() Root.CFrame = StartPosition end)
+	IsStealingBusy = false
 end
 
-local function deliverStolenFruit()
-	local root = getRoot()
-	local spawnPt = getMyGardenSpawnPoint()
-	if root and spawnPt then
-		root.CFrame = spawnPt.CFrame * CFrame.new(0, 3, 0)
+local function DeliverStolenFruit()
+	local Root = GetRoot()
+	local SpawnPoint = GetMyGardenSpawnPoint()
+	if Root and SpawnPoint then
+		Root.CFrame = SpawnPoint.CFrame * CFrame.new(0, 3, 0)
 	end
 end
 
-local function getWildPetRefParts()
-	local list = {}
-	local map = Workspace:FindFirstChild("Map")
-	if map then
-		local ref = map:FindFirstChild("WildPetRef")
-		if ref and ref:IsA("Folder") then
-			for _, c in ipairs(ref:GetChildren()) do
-				if c:IsA("BasePart") and c:GetAttribute("Price") ~= nil then
-					table.insert(list, c)
+-- Pet Utilities
+local function GetWildPetRefParts()
+	local List = {}
+	local Map = Workspace:FindFirstChild("Map")
+	if Map then
+		local ReferenceFolder = Map:FindFirstChild("WildPetRef")
+		if ReferenceFolder and ReferenceFolder:IsA("Folder") then
+			for _, Child in ReferenceFolder:QueryDescendants("> BasePart") do
+				if Child:GetAttribute("Price") ~= nil then
+					table.insert(List, Child)
 				end
 			end
 		end
 	end
-	for _, obj in CollectionService:GetTagged("WildPet") do
-		if obj:IsA("Instance") then table.insert(list, obj) end
+
+	for _, Object in CollectionService:GetTagged("WildPet") do
+		if Object:IsA("Instance") then
+			table.insert(List, Object)
+		end
 	end
-	for _, obj in CollectionService:GetTagged("WildPetTamable") do
-		if obj:IsA("Instance") then table.insert(list, obj) end
+
+	for _, Object in CollectionService:GetTagged("WildPetTamable") do
+		if Object:IsA("Instance") then
+			table.insert(List, Object)
+		end
 	end
-	return list
+
+	return List
 end
 
-local function autoTame()
-	local root = getRoot()
-	if not root then return end
-	local now = os.clock()
-	for _, obj in ipairs(getWildPetRefParts()) do
-		local pos = getModelPos(obj)
-		if pos and (pos - root.Position).Magnitude <= 14 then
-			local key = "t_" .. obj.Name
-			if (now - (lastFire[key] or 0)) >= 3 then
-				lastFire[key] = now
-				pcall(function() Networking.Pets.WildPetTame:Fire(obj) end)
+local function AutoTame()
+	local Root = GetRoot()
+	if not Root then
+		return
+	end
+
+	local Now = os.clock()
+
+	for _, Object in GetWildPetRefParts() do
+		local Position = GetModelPosition(Object)
+		if Position and (Position - Root.Position).Magnitude <= 14 then
+			local Key = "t_" .. Object.Name
+			if (Now - (LastFireTime[Key] or 0)) >= 3 then
+				LastFireTime[Key] = Now
+				pcall(function() Networking.Pets.WildPetTame:Fire(Object) end)
 			end
 		end
 	end
 end
 
-local function growAll()
+-- Garden Actions
+local function GrowAll()
 	pcall(function() Networking.Garden.GrowAllStarting:Fire() end)
 end
 
-local function expandGarden()
+local function ExpandGarden()
 	pcall(function() Networking.Actions.ExpandGarden:Fire() end)
 end
 
-local function getEquippedPetIds()
-	local ok, res = pcall(function() return Networking.Pets.GetEquippedPets:Fire() end)
-	if not ok or type(res) ~= "table" then return {} end
-	local ids = {}
-	for _, pet in ipairs(res) do
-		local id = type(pet) == "table" and pet.Id or pet
-		if typeof(id) == "string" then
-			table.insert(ids, id)
+local function GetEquippedPetIds()
+	local DidSucceed, Response = pcall(function() return Networking.Pets.GetEquippedPets:Fire() end)
+	if not DidSucceed or type(Response) ~= "table" then
+		return {}
+	end
+
+	local PetIds = {}
+	for _, Pet in Response do
+		local PetId = type(Pet) == "table" and Pet.Id or Pet
+		if typeof(PetId) == "string" then
+			table.insert(PetIds, PetId)
 		end
 	end
-	return ids
+
+	return PetIds
 end
 
-local function teleportTo(part)
-	local root = getRoot()
-	if not root or not part then return end
-	root.CFrame = part.CFrame * CFrame.new(0, 3, -2)
+-- Teleport Utilities
+local function TeleportTo(Part)
+	local Root = GetRoot()
+	if not Root or not Part then
+		return
+	end
+	Root.CFrame = Part.CFrame * CFrame.new(0, 3, -2)
 end
 
-local function serverHop()
+-- Server Utilities
+local function ServerHop()
 	pcall(function() Networking.AntiAfk.RequestHop:Fire() end)
-	local ok, response = pcall(function()
+
+	local DidSucceed, Response = pcall(function()
 		return HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?limit=100"))
 	end)
-	if ok and response and response.data then
-		local candidates = {}
-		for _, server in ipairs(response.data) do
-			if server.playing < server.maxPlayers and server.id ~= game.JobId then
-				table.insert(candidates, server)
-			end
+
+	if not DidSucceed or not Response or not Response.data then
+		return
+	end
+
+	local ValidServers = {}
+	for _, ServerData in Response.data do
+		if ServerData.playing < ServerData.maxPlayers and ServerData.id ~= game.JobId then
+			table.insert(ValidServers, ServerData)
 		end
-		if #candidates > 0 then
-			TeleportService:TeleportToPlaceInstance(game.PlaceId, candidates[math.random(1, #candidates)].id, LocalPlayer)
-		end
+	end
+
+	if #ValidServers > 0 then
+		TeleportService:TeleportToPlaceInstance(game.PlaceId, ValidServers[math.random(1, #ValidServers)].id, LocalPlayer)
 	end
 end
 
-local function rejoinServer()
+local function RejoinServer()
 	pcall(function()
 		TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer)
 	end)
 end
 
+-- Background Loops
 LocalPlayer.Idled:Connect(function()
 	if State.AntiAfk then
 		pcall(function()
@@ -624,7 +818,7 @@ task.spawn(function()
 	while true do
 		task.wait(math.max(State.CollectInterval, 0.5))
 		if State.AutoCollect then
-			pcall(collectGarden, getMyGarden())
+			pcall(CollectGarden, GetMyGarden())
 		end
 	end
 end)
@@ -633,7 +827,7 @@ task.spawn(function()
 	while true do
 		task.wait(3)
 		if State.AutoSell then
-			task.spawn(function() pcall(sellAll) end)
+			task.spawn(function() pcall(SellAll) end)
 		end
 	end
 end)
@@ -641,16 +835,20 @@ end)
 task.spawn(function()
 	while true do
 		task.wait(2)
-		if State.AutoTame then pcall(autoTame) end
-		if State.AutoWater then pcall(waterAll) end
+		if State.AutoTame then
+			pcall(AutoTame)
+		end
+		if State.AutoWater then
+			pcall(WaterAll)
+		end
 	end
 end)
 
 task.spawn(function()
 	while true do
 		task.wait(5)
-		if State.AutoStealSell and not stealBusy then
-			task.spawn(function() pcall(stealAndSell) end)
+		if State.AutoStealSell and not IsStealingBusy then
+			task.spawn(function() pcall(StealAndSell) end)
 		end
 	end
 end)
@@ -658,9 +856,13 @@ end)
 task.spawn(function()
 	while true do
 		task.wait(math.max(State.BuyDelay, 1))
-		if State.AutoBuySeed then pcall(buySeed, State.SelectedSeed) end
+		if State.AutoBuySeed then
+			pcall(BuySeed, State.SelectedSeed)
+		end
 		task.wait(0.2)
-		if State.AutoBuyEgg then pcall(buyEgg, State.SelectedEgg) end
+		if State.AutoBuyEgg then
+			pcall(BuyEgg, State.SelectedEgg)
+		end
 	end
 end)
 
@@ -668,20 +870,25 @@ task.spawn(function()
 	while true do
 		task.wait(3)
 		if State.AutoPlant then
-			local seed = resolvePlantSeed()
-			if seed then pcall(plantSeed, seed) end
+			local Seed = ResolvePlantSeed()
+			if Seed then
+				pcall(PlantSeed, Seed)
+			end
 		end
 	end
 end)
-local repo = "https://raw.githubusercontent.com/deividcomsono/Obsidian/main/"
-local Library = loadstring(game:HttpGet(repo .. "Library.lua"))()
+
+-- UI Setup
+local Repository = "https://raw.githubusercontent.com/deividcomsono/Obsidian/main/"
+local Library = loadstring(game:HttpGet(Repository .. "Library.lua"))()
 local ThemeManager = loadstring(game:HttpGet("https://pastefy.app/hOgTtQmZ/raw"))()
-local SaveManager = loadstring(game:HttpGet(repo .. "addons/SaveManager.lua"))()
+local SaveManager = loadstring(game:HttpGet(Repository .. "addons/SaveManager.lua"))()
 local Options = Library.Options
 local Toggles = Library.Toggles
 Library.ForceCheckbox = false
 Library.ShowToggleFrameInKeybinds = true
 
+-- Window & Tabs
 local Window = Library:CreateWindow({
 	Title = "Drift",
 	Footer = "Grow A Garden 2",
@@ -689,10 +896,10 @@ local Window = Library:CreateWindow({
 	NotifySide = "Right",
 	ShowCustomCursor = true,
 	AutoShow = true,
-    SidebarCompacted = true,
-    DisableSearch = true,
-    Animations = { TabSwitch = true },
-    TabTransitionTime = 0.65,
+	SidebarCompacted = true,
+	DisableSearch = true,
+	Animations = { TabSwitch = true },
+	TabTransitionTime = 0.65,
 })
 
 local Tabs = {
@@ -701,41 +908,44 @@ local Tabs = {
 	["UI Settings"] = Window:AddTab("UI Settings", "settings", "Customize the Interface"),
 	Cont = Window:AddTab("Credits", "info", "People who helped us throughout this project"),
 }
+
 Tabs.Main:UpdateWarningBox({
-    Title = "Welcome",
-    Text = "Hello! Thanks for choosing Drift, Your #1 choice for a keyless experience!",
-    IsNormal = true,
-    Visible = true,
-    LockSize = true,
+	Title = "Welcome",
+	Text = "Hello! Thanks for choosing Drift, Your #1 choice for a keyless experience!",
+	IsNormal = true,
+	Visible = true,
+	LockSize = true,
 })
+
+-- Main Tab - Automation
 local FarmAuto = Tabs.Main:AddLeftGroupbox("Automation", "repeat")
 
 FarmAuto:AddToggle("AutoCollect", {
 	Text = "Auto Collect",
 	Default = false,
 	Tooltip = "Automatically picks up fruits from your garden",
-	Callback = function(v) State.AutoCollect = v end,
+	Callback = function(Value) State.AutoCollect = Value end,
 })
 
 FarmAuto:AddToggle("AutoSell", {
 	Text = "Auto Sell",
 	Default = false,
 	Tooltip = "Automatically sells your harvested fruit",
-	Callback = function(v) State.AutoSell = v end,
+	Callback = function(Value) State.AutoSell = Value end,
 })
 
 FarmAuto:AddToggle("AutoPlant", {
 	Text = "Auto Plant",
 	Default = false,
 	Tooltip = "Automatically plants the selected seed",
-	Callback = function(v) State.AutoPlant = v end,
+	Callback = function(Value) State.AutoPlant = Value end,
 })
 
 FarmAuto:AddToggle("AutoWater", {
 	Text = "Auto Water",
 	Default = false,
 	Tooltip = "Automatically waters all plants",
-	Callback = function(v) State.AutoWater = v end,
+	Callback = function(Value) State.AutoWater = Value end,
 })
 
 FarmAuto:AddDivider()
@@ -748,16 +958,17 @@ FarmAuto:AddSlider("CollectInterval", {
 	Rounding = 1,
 	Suffix = "(s)",
 	Tooltip = "Delay between collection",
-	Callback = function(v) State.CollectInterval = v end,
+	Callback = function(Value) State.CollectInterval = Value end,
 })
 
+-- Main Tab - Actions
 local FarmActions = Tabs.Main:AddLeftGroupbox("Actions", "play")
 
 FarmActions:AddButton({
 	Text = "Collect All",
 	Tooltip = "Collect all fruits",
 	Func = function()
-		task.spawn(function() collectGarden(getMyGarden()) end)
+		task.spawn(function() CollectGarden(GetMyGarden()) end)
 	end,
 })
 
@@ -765,7 +976,7 @@ FarmActions:AddButton({
 	Text = "Sell All",
 	Tooltip = "Sells all harvested fruits",
 	Func = function()
-		task.spawn(function() sellAll() end)
+		task.spawn(function() SellAll() end)
 	end,
 })
 
@@ -774,8 +985,10 @@ FarmActions:AddButton({
 	Tooltip = "Plants your selected seed",
 	Func = function()
 		task.spawn(function()
-			local seed = resolvePlantSeed()
-			if seed then plantSeed(seed) end
+			local Seed = ResolvePlantSeed()
+			if Seed then
+				PlantSeed(Seed)
+			end
 		end)
 	end,
 })
@@ -784,22 +997,27 @@ FarmActions:AddButton({
 	Text = "Water All Plants",
 	Tooltip = "Waters every plant in your garden once",
 	Func = function()
-		task.spawn(function() waterAll() end)
+		task.spawn(function() WaterAll() end)
 	end,
 })
 
 FarmActions:AddButton({
 	Text = "Grow All Starter Plants",
 	Tooltip = "Growth on all starting plants",
-	Func = function() growAll() end,
+	Func = function()
+		GrowAll()
+	end,
 })
 
 FarmActions:AddButton({
 	Text = "Expand Garden",
 	Tooltip = "Purchases garden expansion",
-	Func = function() expandGarden() end,
+	Func = function()
+		ExpandGarden()
+	end,
 })
 
+-- Main Tab - Shop
 local ShopGroup = Tabs.Main:AddRightGroupbox("Shop", "shopping-cart")
 
 ShopGroup:AddDivider("Seeds")
@@ -808,7 +1026,7 @@ ShopGroup:AddToggle("AutoBuySeed", {
 	Text = "Auto Buy Seeds",
 	Default = false,
 	Tooltip = "Purchases the selected seed from the shop",
-	Callback = function(v) State.AutoBuySeed = v end,
+	Callback = function(Value) State.AutoBuySeed = Value end,
 })
 
 ShopGroup:AddDropdown("SelectedSeed", {
@@ -817,13 +1035,15 @@ ShopGroup:AddDropdown("SelectedSeed", {
 	Text = "Seed Type",
 	Tooltip = "Choose your seed",
 	Searchable = true,
-	Callback = function(v) State.SelectedSeed = v end,
+	Callback = function(Value) State.SelectedSeed = Value end,
 })
 
 ShopGroup:AddButton({
 	Text = "Buy Selected Seed",
 	Tooltip = "Buys the selected seed once",
-	Func = function() buySeed(State.SelectedSeed) end,
+	Func = function()
+		BuySeed(State.SelectedSeed)
+	end,
 })
 
 ShopGroup:AddDivider("Eggs")
@@ -832,7 +1052,7 @@ ShopGroup:AddToggle("AutoBuyEgg", {
 	Text = "Auto Open Eggs",
 	Default = false,
 	Tooltip = "Continuously opens the selected egg",
-	Callback = function(v) State.AutoBuyEgg = v end,
+	Callback = function(Value) State.AutoBuyEgg = Value end,
 })
 
 ShopGroup:AddDropdown("SelectedEgg", {
@@ -840,13 +1060,15 @@ ShopGroup:AddDropdown("SelectedEgg", {
 	Default = "Common Egg",
 	Text = "Egg Type",
 	Tooltip = "Choose egg",
-	Callback = function(v) State.SelectedEgg = v end,
+	Callback = function(Value) State.SelectedEgg = Value end,
 })
 
 ShopGroup:AddButton({
 	Text = "Open Selected Egg Once",
 	Tooltip = "Opens the selected egg once",
-	Func = function() buyEgg(State.SelectedEgg) end,
+	Func = function()
+		BuyEgg(State.SelectedEgg)
+	end,
 })
 
 ShopGroup:AddDivider("Settings")
@@ -859,9 +1081,10 @@ ShopGroup:AddSlider("BuyDelay", {
 	Rounding = 1,
 	Suffix = "s",
 	Tooltip = "Delay between auto buy or egg open",
-	Callback = function(v) State.BuyDelay = v end,
+	Callback = function(Value) State.BuyDelay = Value end,
 })
 
+-- Main Tab - Steal
 local StealGroup = Tabs.Main:AddRightGroupbox("Steal", "moon")
 
 StealGroup:AddDivider("Automation")
@@ -870,7 +1093,7 @@ StealGroup:AddToggle("AutoStealSell", {
 	Text = "Auto Steal & Sell",
 	Default = false,
 	Tooltip = "Steals fruit from other players' gardens (night time only)",
-	Callback = function(v) State.AutoStealSell = v end,
+	Callback = function(Value) State.AutoStealSell = Value end,
 })
 
 StealGroup:AddSlider("StealPerSession", {
@@ -880,7 +1103,7 @@ StealGroup:AddSlider("StealPerSession", {
 	Max = 100,
 	Rounding = 0,
 	Tooltip = "Maximum number of fruits to steal before stopping",
-	Callback = function(v) State.StealPerSession = v end,
+	Callback = function(Value) State.StealPerSession = Value end,
 })
 
 StealGroup:AddDivider("Actions")
@@ -888,28 +1111,34 @@ StealGroup:AddDivider("Actions")
 StealGroup:AddButton({
 	Text = "Deliver Stolen Fruit",
 	Tooltip = "Teleports you back to your garden after stealing",
-	Func = function() deliverStolenFruit() end,
+	Func = function()
+		DeliverStolenFruit()
+	end,
 })
 
 StealGroup:AddButton({
 	Text = "Steal Once",
 	Tooltip = "Steals fruit once",
 	Func = function()
-		task.spawn(function() pcall(stealAndSell) end)
+		task.spawn(function() pcall(StealAndSell) end)
 	end,
 })
 
+-- Main Tab - Teleport
 local TeleportGroup = Tabs.Main:AddLeftGroupbox("Teleport", "map-pin")
+
 TeleportGroup:AddButton({
 	Text = "Garden",
 	Tooltip = "Teleports you to your garden",
 	Func = function()
-		local sp = getMyGardenSpawnPoint()
-		if sp then teleportTo(sp) end
+		local SpawnPoint = GetMyGardenSpawnPoint()
+		if SpawnPoint then
+			TeleportTo(SpawnPoint)
+		end
 	end,
 })
 
-
+-- Misc Tab - Pets
 local PetGroup = Tabs.Misc:AddLeftGroupbox("Pets", "heart")
 
 PetGroup:AddInput("PetNameInput", {
@@ -917,7 +1146,7 @@ PetGroup:AddInput("PetNameInput", {
 	Text = "Pet Name",
 	Placeholder = "e.g. Raccoon, Unicorn...",
 	Tooltip = "Enter the name of the pet",
-	Callback = function(v) State.PetName = v end,
+	Callback = function(Value) State.PetName = Value end,
 })
 
 PetGroup:AddButton({
@@ -945,8 +1174,8 @@ PetGroup:AddButton({
 	Tooltip = "Unequips every currently equipped pet",
 	Func = function()
 		task.spawn(function()
-			for _, id in ipairs(getEquippedPetIds()) do
-				pcall(function() Networking.Pets.RequestUnequipByName:Fire(id) end)
+			for _, PetId in GetEquippedPetIds() do
+				pcall(function() Networking.Pets.RequestUnequipByName:Fire(PetId) end)
 				task.wait(0.3)
 			end
 		end)
@@ -967,33 +1196,35 @@ PetGroup:AddToggle("AutoTame", {
 	Text = "Auto Tame Nearby",
 	Default = false,
 	Tooltip = "Automatically tames wild pets nearby",
-	Callback = function(v) State.AutoTame = v end,
+	Callback = function(Value) State.AutoTame = Value end,
 })
 
 PetGroup:AddButton({
 	Text = "Snap Pets to You",
 	Tooltip = "Teleports your pets to you",
 	Func = function()
-		local root = getRoot()
-		if root then
-			pcall(function() Networking.Pets.SnapPets:Fire(root.Position) end)
+		local Root = GetRoot()
+		if Root then
+			pcall(function() Networking.Pets.SnapPets:Fire(Root.Position) end)
 		end
 	end,
 })
 
+-- Misc Tab - Server
 local ServerGroup = Tabs.Misc:AddRightGroupbox("Server", "globe")
+
 ServerGroup:AddToggle("AntiAfk", {
 	Text = "Anti AFK",
 	Default = true,
 	Tooltip = "Prevents you from being kicked",
-	Callback = function(v) State.AntiAfk = v end,
+	Callback = function(Value) State.AntiAfk = Value end,
 })
 
 ServerGroup:AddButton({
 	Text = "Server Hop",
 	Tooltip = "Joins a different server",
 	Func = function()
-		task.spawn(function() serverHop() end)
+		task.spawn(function() ServerHop() end)
 	end,
 })
 
@@ -1001,7 +1232,7 @@ ServerGroup:AddButton({
 	Text = "Rejoin Server",
 	Tooltip = "Rejoins the current server",
 	Func = function()
-		task.spawn(function() rejoinServer() end)
+		task.spawn(function() RejoinServer() end)
 	end,
 })
 
@@ -1011,7 +1242,9 @@ ServerGroup:AddButton({
 	Text = "Copy Job ID",
 	Tooltip = "Copies the current server's Job Id",
 	Func = function()
-		if setclipboard then setclipboard(game.JobId) end
+		if setclipboard then
+			setclipboard(game.JobId)
+		end
 	end,
 })
 
@@ -1019,11 +1252,13 @@ ServerGroup:AddButton({
 	Text = "Copy Place ID",
 	Tooltip = "Copies the game's Place ID",
 	Func = function()
-		if setclipboard then setclipboard(tostring(game.PlaceId)) end
+		if setclipboard then
+			setclipboard(tostring(game.PlaceId))
+		end
 	end,
 })
 
-
+-- UI Settings Tab
 local MenuGroup = Tabs["UI Settings"]:AddLeftGroupbox("Menu", "wrench")
 
 MenuGroup:AddToggle("ShowCustomCursor", {
@@ -1072,22 +1307,25 @@ MenuGroup:AddButton({
 		Library:Unload()
 	end,
 })
-local __ContribSrc = game:HttpGet("https://raw.githubusercontent.com/cryp1t/Drift/refs/heads/main/Contributors.luau")
-local __Team, __GameContribs = loadstring(__ContribSrc)()
 
-local __DevBox = Tabs.Cont:AddLeftGroupbox("Team", "wrench")
-for __name, __role in pairs(__Team) do
-    __DevBox:AddLabel("[<font color=\"rgb(255, 255, 100)\">" .. __name .. "</font>] " .. __role)
+-- Credits Tab
+local ContributorsSource = game:HttpGet("https://raw.githubusercontent.com/cryp1t/Drift/refs/heads/main/Contributors.luau")
+local TeamMembers, GameContributors = loadstring(ContributorsSource)()
+
+local TeamGroup = Tabs.Cont:AddLeftGroupbox("Team", "wrench")
+for Name, Role in TeamMembers do
+	TeamGroup:AddLabel("[<font color=\"rgb(255, 255, 100)\">" .. Name .. "</font>] " .. Role)
 end
 
-local __placeId = tostring(game.PlaceId)
-if __GameContribs[__placeId] then
-    local __ContBox = Tabs.Cont:AddRightGroupbox("Contributors", "users")
-    for __name, __contribution in pairs(__GameContribs[__placeId]) do
-        __ContBox:AddLabel("[<font color=\"rgb(255, 255, 100)\">" .. __name .. "</font>] " .. __contribution)
-    end
+local PlaceId = tostring(game.PlaceId)
+if GameContributors[PlaceId] then
+	local ContributorsGroup = Tabs.Cont:AddRightGroupbox("Contributors", "users")
+	for Name, Contribution in GameContributors[PlaceId] do
+		ContributorsGroup:AddLabel("[<font color=\"rgb(255, 255, 100)\">" .. Name .. "</font>] " .. Contribution)
+	end
 end
 
+-- Initialization
 Library.ToggleKeybind = Options.MenuKeybind
 
 ThemeManager:SetLibrary(Library)
@@ -1105,7 +1343,9 @@ Library:Notify({
 	Description = "Loaded successfully",
 	Time = 5,
 })
+
 setclipboard("dsc.gg/getdrift")
+
 Library:Notify({
 	Title = "Drift",
 	Description = "Copied Discord Link",

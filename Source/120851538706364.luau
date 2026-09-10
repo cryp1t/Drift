@@ -1,10 +1,11 @@
--- tung ate 67
-local repo = "https://raw.githubusercontent.com/deividcomsono/Obsidian/main/"
-local Library = loadstring(game:HttpGet(repo .. "Library.lua"))()
+-- UI Setup
+local Repository = "https://raw.githubusercontent.com/davidcomsono/Obsidian/main/"
+local Library = loadstring(game:HttpGet(Repository .. "Library.lua"))()
 local ThemeManager = loadstring(game:HttpGet("https://pastefy.app/hOgTtQmZ/raw"))()
-local SaveManager = loadstring(game:HttpGet(repo .. "addons/SaveManager.lua"))()
+local SaveManager = loadstring(game:HttpGet(Repository .. "addons/SaveManager.lua"))()
 local Options = Library.Options
 local Toggles = Library.Toggles
+
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -12,69 +13,77 @@ local Workspace = game:GetService("Workspace")
 local Camera = Workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
 
-if getgenv().imRunning then
-    getgenv().imRunning = false
+-- Global State
+local Environment = getgenv()
+
+if DriftLoaded then
+    Environment.DriftLoaded = false
     task.wait(0.2)
 end
-getgenv().imRunning = true
-getgenv().SilentAim = false
-getgenv().WallCheck = false
-getgenv().TargetTracer = false
-getgenv().DrawFOV = false
-getgenv().FOV_RADIUS = 150
-getgenv().Wallbang = false
-getgenv().AutoShoot = false
-getgenv().Master_ESP = false
-getgenv().ESP_Boxes = false
-getgenv().ESP_Names = false
-getgenv().ESP_Distances = false
-getgenv().ESP_Highlights = false
-getgenv().BoxColor = Color3.fromRGB(255, 255, 255)
-getgenv().NameColor = Color3.fromRGB(255, 255, 255)
-getgenv().DistanceColor = Color3.fromRGB(255, 255, 255)
-getgenv().ChamsFillColor = Color3.fromRGB(255, 0, 0)
-getgenv().ChamsOutlineColor = Color3.fromRGB(255, 255, 255)
-getgenv().FOVColor = Color3.fromRGB(255, 255, 255)
-getgenv().TracerColor = Color3.fromRGB(255, 255, 255)
 
-local t1 = {
-    value4 = UserInputService,
-    value5 = Workspace,
-    value6 = Camera,
-    value7 = LocalPlayer,
-    value8 = nil
+Environment.DriftLoaded = true
+Environment.SilentAim = false
+Environment.WallCheck = false
+Environment.TargetTracer = false
+Environment.DrawFov = false
+Environment.FovRadius = 150
+Environment.Wallbang = false
+Environment.AutoShoot = false
+Environment.MasterEsp = false
+Environment.EspBoxes = false
+Environment.EspNames = false
+Environment.EspDistances = false
+Environment.EspHighlights = false
+Environment.BoxColor = Color3.fromRGB(255, 255, 255)
+Environment.NameColor = Color3.fromRGB(255, 255, 255)
+Environment.DistanceColor = Color3.fromRGB(255, 255, 255)
+Environment.ChamsFillColor = Color3.fromRGB(255, 0, 0)
+Environment.ChamsOutlineColor = Color3.fromRGB(255, 255, 255)
+Environment.FovColor = Color3.fromRGB(255, 255, 255)
+Environment.TracerColor = Color3.fromRGB(255, 255, 255)
+
+-- Shared Context
+local Context = {
+    UserInput = UserInputService,
+    Workspace = Workspace,
+    Camera = Camera,
+    LocalPlayer = LocalPlayer,
+    TargetNode = nil
 }
 
-local MAX_DISTANCE = 1000
-local activeConnections = {}
-local activeDrawings = {}
+local MaxDistance = 1000
+local ActiveConnections = {}
+local ActiveDrawings = {}
 
-local function SafeConnect(signal, callback)
-    local connection = signal:Connect(callback)
-    table.insert(activeConnections, connection)
-    return connection
+-- Connection & Drawing Helpers
+local function SafeConnect(Signal, Callback)
+    local Connection = Signal:Connect(Callback)
+    table.insert(ActiveConnections, Connection)
+    return Connection
 end
 
-local function TrackDrawing(obj)
-    table.insert(activeDrawings, obj)
-    return obj
+local function TrackDrawing(DrawingObject)
+    table.insert(ActiveDrawings, DrawingObject)
+    return DrawingObject
 end
 
-local FOV_Outer = TrackDrawing(Drawing.new("Circle"))
-local FOV_Main = TrackDrawing(Drawing.new("Circle"))
-local FOV_Inner = TrackDrawing(Drawing.new("Circle"))
+-- FOV Circles
+local FovOuter = TrackDrawing(Drawing.new("Circle"))
+local FovMain = TrackDrawing(Drawing.new("Circle"))
+local FovInner = TrackDrawing(Drawing.new("Circle"))
 
-FOV_Outer.Thickness = 1
-FOV_Outer.Color = Color3.new(0, 0, 0)
-FOV_Outer.Filled = false
+FovOuter.Thickness = 1
+FovOuter.Color = Color3.new(0, 0, 0)
+FovOuter.Filled = false
 
-FOV_Main.Thickness = 1
-FOV_Main.Filled = false
+FovMain.Thickness = 1
+FovMain.Filled = false
 
-FOV_Inner.Thickness = 1
-FOV_Inner.Color = Color3.new(0, 0, 0)
-FOV_Inner.Filled = false
+FovInner.Thickness = 1
+FovInner.Color = Color3.new(0, 0, 0)
+FovInner.Filled = false
 
+-- Tracer Lines
 local TracerLineOutline = TrackDrawing(Drawing.new("Line"))
 TracerLineOutline.Thickness = 3
 TracerLineOutline.Color = Color3.new(0, 0, 0)
@@ -87,6 +96,7 @@ TracerLine.Visible = false
 
 Library.ShowToggleFrameInKeybinds = true
 
+-- Window & Tabs
 local Window = Library:CreateWindow({
 	Title = "Drift",
 	Footer = "Murder Duels",
@@ -103,8 +113,9 @@ local Window = Library:CreateWindow({
 local Tabs = {
     Main = Window:AddTab("Main", "house", "Main features"),
     ["UI Settings"] = Window:AddTab("UI Settings", "settings", "Customize the Interface"),
-    Cont = Window:AddTab("Credits", "info", "People who helped us throughout this project!"),
+    Credits = Window:AddTab("Credits", "info", "People who helped us throughout this project!"),
 }
+
 Tabs.Main:UpdateWarningBox({
     Title = "Welcome",
     Text = "Hello! Thanks for choosing Drift, Your #1 choice for a keyless experience!",
@@ -112,25 +123,23 @@ Tabs.Main:UpdateWarningBox({
     Visible = true,
     LockSize = true,
 })
+
+-- Combat Group
 local CombatGroup = Tabs.Main:AddGroupbox({
     Side = "Left",
     Name = "Combat",
     IconName = "swords",
 })
 
-local VisualsGroup = Tabs.Main:AddGroupbox({
-    Side = "Right",
-    Name = "Visuals",
-    IconName = "eye",
-})
 CombatGroup:AddDivider("Silent Aim")
+
 CombatGroup:AddToggle("SilentAim", {
     Text = "Enabled",
     Default = false,
 })
 
 Toggles.SilentAim:OnChanged(function()
-    getgenv().SilentAim = Toggles.SilentAim.Value
+    Environment.SilentAim = Toggles.SilentAim.Value
 end)
 
 CombatGroup:AddToggle("WallCheck", {
@@ -139,37 +148,39 @@ CombatGroup:AddToggle("WallCheck", {
 })
 
 Toggles.WallCheck:OnChanged(function()
-    getgenv().WallCheck = Toggles.WallCheck.Value
+    Environment.WallCheck = Toggles.WallCheck.Value
 end)
 
 CombatGroup:AddToggle("TargetTracer", {
     Text = "Target Tracer",
     Default = false,
 }):AddColorPicker("TracerColorPicker", {
-    Default = getgenv().TracerColor,
+    Default = TracerColor,
     Title = "Tracer Color",
     Callback = function(Value)
-        getgenv().TracerColor = Value
+        Environment.TracerColor = Value
     end,
 })
 
 Toggles.TargetTracer:OnChanged(function()
-    getgenv().TargetTracer = Toggles.TargetTracer.Value
+    Environment.TargetTracer = Toggles.TargetTracer.Value
 end)
+
 CombatGroup:AddDivider()
+
 CombatGroup:AddToggle("DrawFOV", {
     Text = "Draw FOV",
     Default = false,
 }):AddColorPicker("FOVColorPicker", {
-    Default = getgenv().FOVColor,
+    Default = FovColor,
     Title = "FOV Color",
     Callback = function(Value)
-        getgenv().FOVColor = Value
+        Environment.FovColor = Value
     end,
 })
 
 Toggles.DrawFOV:OnChanged(function()
-    getgenv().DrawFOV = Toggles.DrawFOV.Value
+    Environment.DrawFov = Toggles.DrawFOV.Value
 end)
 
 CombatGroup:AddSlider("FOVSize", {
@@ -182,16 +193,18 @@ CombatGroup:AddSlider("FOVSize", {
 })
 
 Options.FOVSize:OnChanged(function()
-    getgenv().FOV_RADIUS = Options.FOVSize.Value
+    Environment.FovRadius = Options.FOVSize.Value
 end)
+
 CombatGroup:AddDivider("Misc")
+
 CombatGroup:AddToggle("Wallbang", {
     Text = "Wallbang",
     Default = false,
 })
 
 Toggles.Wallbang:OnChanged(function()
-    getgenv().Wallbang = Toggles.Wallbang.Value
+    Environment.Wallbang = Toggles.Wallbang.Value
 end)
 
 CombatGroup:AddToggle("AutoShoot", {
@@ -200,378 +213,436 @@ CombatGroup:AddToggle("AutoShoot", {
 })
 
 Toggles.AutoShoot:OnChanged(function()
-    getgenv().AutoShoot = Toggles.AutoShoot.Value
+    Environment.AutoShoot = Toggles.AutoShoot.Value
 end)
+
+-- Visuals Group
+local VisualsGroup = Tabs.Main:AddGroupbox({
+    Side = "Right",
+    Name = "Visuals",
+    IconName = "eye",
+})
+
 VisualsGroup:AddDivider("ESP")
-VisualsGroup:AddToggle("Master_ESP", {
+
+VisualsGroup:AddToggle("MasterESP", {
     Text = "Enable",
     Default = false,
 })
 
-Toggles.Master_ESP:OnChanged(function()
-    getgenv().Master_ESP = Toggles.Master_ESP.Value
+Toggles.MasterESP:OnChanged(function()
+    Environment.MasterEsp = Toggles.MasterESP.Value
 end)
+
 VisualsGroup:AddDivider("Settings")
-VisualsGroup:AddToggle("ESP_Boxes", {
+
+VisualsGroup:AddToggle("ESPBoxes", {
     Text = "Boxes",
     Default = false,
 }):AddColorPicker("BoxColorPicker", {
-    Default = getgenv().BoxColor,
+    Default = BoxColor,
     Title = "Box Color",
     Callback = function(Value)
-        getgenv().BoxColor = Value
+        Environment.BoxColor = Value
     end,
 })
 
-Toggles.ESP_Boxes:OnChanged(function()
-    getgenv().ESP_Boxes = Toggles.ESP_Boxes.Value
+Toggles.ESPBoxes:OnChanged(function()
+    Environment.EspBoxes = Toggles.ESPBoxes.Value
 end)
 
-VisualsGroup:AddToggle("ESP_Names", {
+VisualsGroup:AddToggle("ESPNames", {
     Text = "Names",
     Default = false,
 }):AddColorPicker("NameColorPicker", {
-    Default = getgenv().NameColor,
+    Default = NameColor,
     Title = "Name Color",
     Callback = function(Value)
-        getgenv().NameColor = Value
+        Environment.NameColor = Value
     end,
 })
 
-Toggles.ESP_Names:OnChanged(function()
-    getgenv().ESP_Names = Toggles.ESP_Names.Value
+Toggles.ESPNames:OnChanged(function()
+    Environment.EspNames = Toggles.ESPNames.Value
 end)
 
-VisualsGroup:AddToggle("ESP_Distances", {
+VisualsGroup:AddToggle("ESPDistances", {
     Text = "Distance",
     Default = false,
 }):AddColorPicker("DistanceColorPicker", {
-    Default = getgenv().DistanceColor,
+    Default = DistanceColor,
     Title = "Distance Color",
     Callback = function(Value)
-        getgenv().DistanceColor = Value
+        Environment.DistanceColor = Value
     end,
 })
 
-Toggles.ESP_Distances:OnChanged(function()
-    getgenv().ESP_Distances = Toggles.ESP_Distances.Value
+Toggles.ESPDistances:OnChanged(function()
+    Environment.EspDistances = Toggles.ESPDistances.Value
 end)
 
-VisualsGroup:AddToggle("ESP_Highlights", {
+VisualsGroup:AddToggle("ESPHighlights", {
     Text = "Chams",
     Default = false,
 }):AddColorPicker("ChamsFillPicker", {
-    Default = getgenv().ChamsFillColor,
+    Default = ChamsFillColor,
     Title = "Chams Fill",
     Callback = function(Value)
-        getgenv().ChamsFillColor = Value
+        Environment.ChamsFillColor = Value
     end,
 }):AddColorPicker("ChamsOutlinePicker", {
-    Default = getgenv().ChamsOutlineColor,
+    Default = ChamsOutlineColor,
     Title = "Chams Outline",
     Callback = function(Value)
-        getgenv().ChamsOutlineColor = Value
+        Environment.ChamsOutlineColor = Value
     end,
 })
 
-Toggles.ESP_Highlights:OnChanged(function()
-    getgenv().ESP_Highlights = Toggles.ESP_Highlights.Value
+Toggles.ESPHighlights:OnChanged(function()
+    Environment.EspHighlights = Toggles.ESPHighlights.Value
 end)
 
-local function getCharacterBounds(character)
-    local minX, minY = math.huge, math.huge
-    local maxX, maxY = -math.huge, -math.huge
-    local onScreenAny = false
+-- ESP Utilities
+local function FindCharacterBounds(Character)
+    local MinX, MinY = math.huge, math.huge
+    local MaxX, MaxY = -math.huge, -math.huge
+    local IsOnScreen = false
 
-    for _, part in ipairs(character:GetChildren()) do
-        if part:IsA("BasePart") then
-            local cframe, size = part.CFrame, part.Size
-            local halfSize = size / 2
+    for _, Part in Character:QueryDescendants("> BasePart") do
+        local HalfSize = Part.Size / 2
+        local PartCFrame = Part.CFrame
 
-            local vertices = {
-                cframe * Vector3.new(-halfSize.X, -halfSize.Y, -halfSize.Z),
-                cframe * Vector3.new(halfSize.X, -halfSize.Y, -halfSize.Z),
-                cframe * Vector3.new(-halfSize.X, halfSize.Y, -halfSize.Z),
-                cframe * Vector3.new(halfSize.X, halfSize.Y, -halfSize.Z),
-                cframe * Vector3.new(-halfSize.X, -halfSize.Y, halfSize.Z),
-                cframe * Vector3.new(halfSize.X, -halfSize.Y, halfSize.Z),
-                cframe * Vector3.new(-halfSize.X, halfSize.Y, halfSize.Z),
-                cframe * Vector3.new(halfSize.X, halfSize.Y, halfSize.Z)
-            }
+        local Vertices = {
+            PartCFrame * Vector3.new(-HalfSize.X, -HalfSize.Y, -HalfSize.Z),
+            PartCFrame * Vector3.new(HalfSize.X, -HalfSize.Y, -HalfSize.Z),
+            PartCFrame * Vector3.new(-HalfSize.X, HalfSize.Y, -HalfSize.Z),
+            PartCFrame * Vector3.new(HalfSize.X, HalfSize.Y, -HalfSize.Z),
+            PartCFrame * Vector3.new(-HalfSize.X, -HalfSize.Y, HalfSize.Z),
+            PartCFrame * Vector3.new(HalfSize.X, -HalfSize.Y, HalfSize.Z),
+            PartCFrame * Vector3.new(-HalfSize.X, HalfSize.Y, HalfSize.Z),
+            PartCFrame * Vector3.new(HalfSize.X, HalfSize.Y, HalfSize.Z)
+        }
 
-            for _, vertex in ipairs(vertices) do
-                local screenPos, onScreen = Camera:WorldToViewportPoint(vertex)
-                if onScreen then
-                    onScreenAny = true
-                    if screenPos.X < minX then minX = screenPos.X end
-                    if screenPos.X > maxX then maxX = screenPos.X end
-                    if screenPos.Y < minY then minY = screenPos.Y end
-                    if screenPos.Y > maxY then maxY = screenPos.Y end
-                end
+        for _, Vertex in Vertices do
+            local ScreenPosition, OnScreen = Camera:WorldToViewportPoint(Vertex)
+            if not OnScreen then
+                continue
             end
+
+            IsOnScreen = true
+            if ScreenPosition.X < MinX then MinX = ScreenPosition.X end
+            if ScreenPosition.X > MaxX then MaxX = ScreenPosition.X end
+            if ScreenPosition.Y < MinY then MinY = ScreenPosition.Y end
+            if ScreenPosition.Y > MaxY then MaxY = ScreenPosition.Y end
         end
     end
-    return onScreenAny, Vector2.new(minX, minY), Vector2.new(maxX, maxY)
+
+    return IsOnScreen, Vector2.new(MinX, MinY), Vector2.new(MaxX, MaxY)
 end
 
-local function applyHighlight(player)
-    if player.Character then
-        local highlight = player.Character:FindFirstChild("GetReal")
-        if getgenv().Master_ESP and getgenv().ESP_Highlights then
-            if not highlight then
-                highlight = Instance.new("Highlight")
-                highlight.Name = "GetReal"
-                highlight.Adornee = player.Character
-                highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-                highlight.Parent = player.Character
-            end
-            highlight.FillColor = getgenv().ChamsFillColor
-            highlight.OutlineColor = getgenv().ChamsOutlineColor
-        else
-            if highlight then
-                highlight:Destroy()
-            end
+local function ApplyHighlight(Player)
+    if not Player.Character then
+        return
+    end
+
+    local Highlight = Player.Character:FindFirstChild("GetReal")
+
+    if MasterEsp and EspHighlights then
+        if not Highlight then
+            Highlight = Instance.new("Highlight")
+            Highlight.Name = "GetReal"
+            Highlight.Adornee = Player.Character
+            Highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+            Highlight.Parent = Player.Character
+        end
+
+        Highlight.FillColor = ChamsFillColor
+        Highlight.OutlineColor = ChamsOutlineColor
+    else
+        if Highlight then
+            Highlight:Destroy()
         end
     end
 end
 
-local function createESP(player)
-    if player == LocalPlayer then return end
-
-    local boxOuter = TrackDrawing(Drawing.new("Square"))
-    local boxMain = TrackDrawing(Drawing.new("Square"))
-    local boxInner = TrackDrawing(Drawing.new("Square"))
-
-    boxOuter.Color = Color3.new(0, 0, 0)
-    boxOuter.Thickness = 1
-    boxOuter.Filled = false
-
-    boxMain.Thickness = 1
-    boxMain.Filled = false
-
-    boxInner.Color = Color3.new(0, 0, 0)
-    boxInner.Thickness = 1
-    boxInner.Filled = false
-
-    local nameText = TrackDrawing(Drawing.new("Text"))
-    nameText.Size = 13
-    nameText.Center = true
-    nameText.Outline = true
-
-    local distText = TrackDrawing(Drawing.new("Text"))
-    distText.Size = 13
-    distText.Center = true
-    distText.Outline = true
-
-    local function clearAllVisibility()
-        boxOuter.Visible = false
-        boxMain.Visible = false
-        boxInner.Visible = false
-        nameText.Visible = false
-        distText.Visible = false
+-- ESP Per-Player
+local function CreateEsp(Player)
+    if Player == LocalPlayer then
+        return
     end
 
-    local connection
-    connection = SafeConnect(RunService.RenderStepped, function()
-        if not getgenv().imRunning then
-            clearAllVisibility()
-            connection:Disconnect()
+    local BoxOuter = TrackDrawing(Drawing.new("Square"))
+    local BoxMain = TrackDrawing(Drawing.new("Square"))
+    local BoxInner = TrackDrawing(Drawing.new("Square"))
+
+    BoxOuter.Color = Color3.new(0, 0, 0)
+    BoxOuter.Thickness = 1
+    BoxOuter.Filled = false
+
+    BoxMain.Thickness = 1
+    BoxMain.Filled = false
+
+    BoxInner.Color = Color3.new(0, 0, 0)
+    BoxInner.Thickness = 1
+    BoxInner.Filled = false
+
+    local NameText = TrackDrawing(Drawing.new("Text"))
+    NameText.Size = 13
+    NameText.Center = true
+    NameText.Outline = true
+
+    local DistText = TrackDrawing(Drawing.new("Text"))
+    DistText.Size = 13
+    DistText.Center = true
+    DistText.Outline = true
+
+    local function ClearAllVisibility()
+        BoxOuter.Visible = false
+        BoxMain.Visible = false
+        BoxInner.Visible = false
+        NameText.Visible = false
+        DistText.Visible = false
+    end
+
+    local Connection
+    Connection = SafeConnect(RunService.RenderStepped, function()
+        if not DriftLoaded then
+            ClearAllVisibility()
+            Connection:Disconnect()
             return
         end
 
-        local character = player.Character
-        local myCharacter = LocalPlayer.Character
-        
-        if not character or not character:IsDescendantOf(workspace) or not myCharacter then
-            clearAllVisibility()
-            if not player:IsDescendantOf(Players) then
-                boxOuter:Remove()
-                boxMain:Remove()
-                boxInner:Remove()
-                nameText:Remove()
-                distText:Remove()
-                connection:Disconnect()
+        local Character = Player.Character
+        local MyCharacter = LocalPlayer.Character
+
+        if not Character or not Character:IsDescendantOf(Workspace) or not MyCharacter then
+            ClearAllVisibility()
+            if not Player:IsDescendantOf(Players) then
+                BoxOuter:Remove()
+                BoxMain:Remove()
+                BoxInner:Remove()
+                NameText:Remove()
+                DistText:Remove()
+                Connection:Disconnect()
             end
             return
         end
 
-        local rootPart = character:FindFirstChild("HumanoidRootPart")
-        local myRootPart = myCharacter:FindFirstChild("HumanoidRootPart")
-        local humanoid = character:FindFirstChildOfClass("Humanoid")
-        
-        applyHighlight(player)
+        local RootPart = Character:FindFirstChild("HumanoidRootPart")
+        local MyRootPart = MyCharacter:FindFirstChild("HumanoidRootPart")
+        local Humanoid = Character:FindFirstChildOfClass("Humanoid")
 
-        if rootPart and myRootPart and humanoid and humanoid.Health > 0 and getgenv().Master_ESP then
-            local distance = (myRootPart.Position - rootPart.Position).Magnitude
-            if distance > MAX_DISTANCE then
-                clearAllVisibility()
-                return
-            end
+        ApplyHighlight(Player)
 
-            local isValid, topLeft, bottomRight = getCharacterBounds(character)
-            if isValid then
-                local boxWidth = bottomRight.X - topLeft.X
-                local boxHeight = bottomRight.Y - topLeft.Y
+        if not RootPart or not MyRootPart or not Humanoid then
+            ClearAllVisibility()
+            return
+        end
 
-                if getgenv().ESP_Boxes then
-                    boxMain.Size = Vector2.new(boxWidth, boxHeight)
-                    boxMain.Position = topLeft
-                    boxMain.Color = getgenv().BoxColor
-                    boxMain.Visible = true
+        if Humanoid.Health <= 0 or not MasterEsp then
+            ClearAllVisibility()
+            return
+        end
 
-                    boxOuter.Size = Vector2.new(boxWidth + 2, boxHeight + 2)
-                    boxOuter.Position = topLeft - Vector2.new(1, 1)
-                    boxOuter.Visible = true
+        local Distance = (MyRootPart.Position - RootPart.Position).Magnitude
 
-                    boxInner.Size = Vector2.new(boxWidth - 2, boxHeight - 2)
-                    boxInner.Position = topLeft + Vector2.new(1, 1)
-                    boxInner.Visible = true
-                else
-                    boxMain.Visible = false
-                    boxOuter.Visible = false
-                    boxInner.Visible = false
-                end
+        if Distance > MaxDistance then
+            ClearAllVisibility()
+            return
+        end
 
-                local currentOffset = 2
+        local IsValid, TopLeft, BottomRight = FindCharacterBounds(Character)
 
-                if getgenv().ESP_Names then
-                    nameText.Text = player.Name
-                    nameText.Color = getgenv().NameColor
-                    nameText.Position = Vector2.new(topLeft.X + (boxWidth / 2), bottomRight.Y + currentOffset)
-                    nameText.Visible = true
-                    currentOffset = currentOffset + 14
-                else
-                    nameText.Visible = false
-                end
+        if not IsValid then
+            ClearAllVisibility()
+            return
+        end
 
-                if getgenv().ESP_Distances then
-                    distText.Text = math.round(distance) .. " meters"
-                    distText.Color = getgenv().DistanceColor
-                    distText.Position = Vector2.new(topLeft.X + (boxWidth / 2), bottomRight.Y + currentOffset)
-                    distText.Visible = true
-                else
-                    distText.Visible = false
-                end
-            else
-                clearAllVisibility()
-            end
+        local BoxWidth = BottomRight.X - TopLeft.X
+        local BoxHeight = BottomRight.Y - TopLeft.Y
+
+        if EspBoxes then
+            BoxMain.Size = Vector2.new(BoxWidth, BoxHeight)
+            BoxMain.Position = TopLeft
+            BoxMain.Color = BoxColor
+            BoxMain.Visible = true
+
+            BoxOuter.Size = Vector2.new(BoxWidth + 2, BoxHeight + 2)
+            BoxOuter.Position = TopLeft - Vector2.new(1, 1)
+            BoxOuter.Visible = true
+
+            BoxInner.Size = Vector2.new(BoxWidth - 2, BoxHeight - 2)
+            BoxInner.Position = TopLeft + Vector2.new(1, 1)
+            BoxInner.Visible = true
         else
-            clearAllVisibility()
+            BoxMain.Visible = false
+            BoxOuter.Visible = false
+            BoxInner.Visible = false
+        end
+
+        local CurrentOffset = 2
+
+        if EspNames then
+            NameText.Text = Player.Name
+            NameText.Color = NameColor
+            NameText.Position = Vector2.new(TopLeft.X + (BoxWidth / 2), BottomRight.Y + CurrentOffset)
+            NameText.Visible = true
+            CurrentOffset = CurrentOffset + 14
+        else
+            NameText.Visible = false
+        end
+
+        if EspDistances then
+            DistText.Text = math.round(Distance) .. " meters"
+            DistText.Color = DistanceColor
+            DistText.Position = Vector2.new(TopLeft.X + (BoxWidth / 2), BottomRight.Y + CurrentOffset)
+            DistText.Visible = true
+        else
+            DistText.Visible = false
         end
     end)
 end
 
-for _, player in ipairs(Players:GetPlayers()) do
-    createESP(player)
+-- ESP Initialization
+for _, Player in Players:GetPlayers() do
+    CreateEsp(Player)
 end
-SafeConnect(Players.PlayerAdded, createESP)
 
-function t1.value10(p6, p7)
-    if getgenv().Wallbang then
-        return true 
+SafeConnect(Players.PlayerAdded, CreateEsp)
+
+-- Silent Aim Wall Visibility
+local function IsTargetVisible(TargetPart, TargetCharacter)
+    if Wallbang then
+        return true
     end
-    local CFramePosition = t1.value6.CFrame.Position
-    local v24 = p6.Position - CFramePosition
-    local raycastParams = RaycastParams.new()
-    raycastParams.FilterType = Enum.RaycastFilterType.Exclude
-    raycastParams.FilterDescendantsInstances = {t1.value7.Character, p7, t1.value6}
-    raycastParams.IgnoreWater = true
-    return t1.value5:Raycast(CFramePosition, v24, raycastParams) == nil
+
+    local CameraPosition = Context.Camera.CFrame.Position
+    local RayDirection = TargetPart.Position - CameraPosition
+
+    local RaycastParams = RaycastParams.new()
+    RaycastParams.FilterType = Enum.RaycastFilterType.Exclude
+    RaycastParams.FilterDescendantsInstances = {Context.LocalPlayer.Character, TargetCharacter, Context.Camera}
+    RaycastParams.IgnoreWater = true
+
+    return Context.Workspace:Raycast(CameraPosition, RayDirection, RaycastParams) == nil
 end
 
+-- Main Render Loop
 SafeConnect(RunService.RenderStepped, function()
-    if not getgenv().imRunning then return end
-
-    local currentMousePos = t1.value4:GetMouseLocation()
-
-    if getgenv().DrawFOV then
-        FOV_Main.Radius = getgenv().FOV_RADIUS
-        FOV_Main.Position = currentMousePos
-        FOV_Main.Color = getgenv().FOVColor
-        FOV_Main.Visible = true
-
-        FOV_Outer.Radius = getgenv().FOV_RADIUS + 1
-        FOV_Outer.Position = currentMousePos
-        FOV_Outer.Visible = true
-
-        FOV_Inner.Radius = getgenv().FOV_RADIUS - 1
-        FOV_Inner.Position = currentMousePos
-        FOV_Inner.Visible = true
-    else
-        FOV_Main.Visible = false
-        FOV_Outer.Visible = false
-        FOV_Inner.Visible = false
+    if not DriftLoaded then
+        return
     end
 
-    if getgenv().SilentAim then
-        local targetNode = nil
-        local shortestDistance = math.huge
-        local characterFolder = t1.value5:FindFirstChild("Characters")
-        local structuralTargets = characterFolder and characterFolder:GetChildren() or t1.value5:GetChildren()
-        local myChar = t1.value7.Character
-        local myRoot = myChar and (myChar:FindFirstChild("HumanoidRootPart") or myChar:FindFirstChild("Head"))
-        
-        if myRoot then
-            for _, v in ipairs(structuralTargets) do
-                if v:IsA("Model") and v ~= myChar then
-                    local Humanoid = v:FindFirstChildOfClass("Humanoid")
-                    if Humanoid and Humanoid.Health > 0 then
-                        local mySide = t1.value7:GetAttribute("MatchSide")
-                        local enemySide = v:GetAttribute("MatchSide")
-                        
-                        if mySide and enemySide and mySide == enemySide then
-                            if v:GetAttribute("BotMatchBot") ~= true and v:GetAttribute("Decoy") ~= true then
-                                continue
-                            end
-                        end
-                        
-                        local structuralPart = v:FindFirstChild("Head") or v:FindFirstChild("HumanoidRootPart")
-                        if structuralPart then
-                            local screenPos, onScreen = t1.value6:WorldToViewportPoint(structuralPart.Position)
-                            local mouseDist = (Vector2.new(screenPos.X, screenPos.Y) - currentMousePos).Magnitude
-                            
-                            if (onScreen or getgenv().Wallbang) and mouseDist <= getgenv().FOV_RADIUS then
-                                local isVisible = t1.value10(structuralPart, v)
-                                if not getgenv().WallCheck or isVisible then
-                                    local worldDist = (structuralPart.Position - myRoot.Position).Magnitude
-                                    if worldDist < shortestDistance then
-                                        shortestDistance = worldDist
-                                        targetNode = structuralPart
-                                    end
-                                end
-                            end
-                        end
+    local CurrentMousePosition = Context.UserInput:GetMouseLocation()
+
+    -- FOV Circle Rendering
+    if DrawFov then
+        FovMain.Radius = FovRadius
+        FovMain.Position = CurrentMousePosition
+        FovMain.Color = FovColor
+        FovMain.Visible = true
+
+        FovOuter.Radius = FovRadius + 1
+        FovOuter.Position = CurrentMousePosition
+        FovOuter.Visible = true
+
+        FovInner.Radius = FovRadius - 1
+        FovInner.Position = CurrentMousePosition
+        FovInner.Visible = true
+    else
+        FovMain.Visible = false
+        FovOuter.Visible = false
+        FovInner.Visible = false
+    end
+
+    -- Silent Aim Target Selection
+    if SilentAim then
+        local TargetNode = nil
+        local ShortestDistance = math.huge
+        local CharacterFolder = Context.Workspace:FindFirstChild("Characters")
+        local StructuralTargets = CharacterFolder and CharacterFolder:QueryDescendants("> Instance") or Context.Workspace:QueryDescendants("> Instance")
+        local MyCharacter = Context.LocalPlayer.Character
+        local MyRoot = MyCharacter and (MyCharacter:FindFirstChild("HumanoidRootPart") or MyCharacter:FindFirstChild("Head"))
+
+        if not MyRoot then
+            Context.TargetNode = nil
+        else
+            for _, Candidate in StructuralTargets do
+                if not Candidate:IsA("Model") or Candidate == MyCharacter then
+                    continue
+                end
+
+                local CandidateHumanoid = Candidate:FindFirstChildOfClass("Humanoid")
+                if not CandidateHumanoid or CandidateHumanoid.Health <= 0 then
+                    continue
+                end
+
+                local MySide = Context.LocalPlayer:GetAttribute("MatchSide")
+                local EnemySide = Candidate:GetAttribute("MatchSide")
+
+                if MySide and EnemySide and MySide == EnemySide then
+                    if Candidate:GetAttribute("BotMatchBot") ~= true and Candidate:GetAttribute("Decoy") ~= true then
+                        continue
+                    end
+                end
+
+                local StructuralPart = Candidate:FindFirstChild("Head") or Candidate:FindFirstChild("HumanoidRootPart")
+                if not StructuralPart then
+                    continue
+                end
+
+                local ScreenPosition, OnScreen = Context.Camera:WorldToViewportPoint(StructuralPart.Position)
+                local MouseDistance = (Vector2.new(ScreenPosition.X, ScreenPosition.Y) - CurrentMousePosition).Magnitude
+
+                if not (OnScreen or Wallbang) then
+                    continue
+                end
+
+                if MouseDistance > FovRadius then
+                    continue
+                end
+
+                local IsVisible = IsTargetVisible(StructuralPart, Candidate)
+                if not WallCheck or IsVisible then
+                    local WorldDistance = (StructuralPart.Position - MyRoot.Position).Magnitude
+                    if WorldDistance < ShortestDistance then
+                        ShortestDistance = WorldDistance
+                        TargetNode = StructuralPart
                     end
                 end
             end
+
+            Context.TargetNode = TargetNode
         end
-        t1.value8 = targetNode 
     else
-        t1.value8 = nil
+        Context.TargetNode = nil
     end
 
-    if getgenv().TargetTracer and t1.value8 then
-        local screenPos, onScreen = t1.value6:WorldToViewportPoint(t1.value8.Position)
-        if onScreen then
-            local originPos
-            if UserInputService.TouchEnabled and not UserInputService.MouseEnabled then
-                originPos = Vector2.new(t1.value6.ViewportSize.X / 2, t1.value6.ViewportSize.Y)
-            else
-                originPos = currentMousePos
-            end
-            local targetPos = Vector2.new(screenPos.X, screenPos.Y)
+    -- Target Tracer Rendering
+    if TargetTracer and Context.TargetNode then
+        local ScreenPosition, OnScreen = Context.Camera:WorldToViewportPoint(Context.TargetNode.Position)
 
-            TracerLineOutline.From = originPos
-            TracerLineOutline.To = targetPos
-            TracerLineOutline.Visible = true
-
-            TracerLine.From = originPos
-            TracerLine.To = targetPos
-            TracerLine.Color = getgenv().TracerColor
-            TracerLine.Visible = true
-        else
+        if not OnScreen then
             TracerLineOutline.Visible = false
             TracerLine.Visible = false
+        else
+            local OriginPosition
+            if UserInputService.TouchEnabled and not UserInputService.MouseEnabled then
+                OriginPosition = Vector2.new(Context.Camera.ViewportSize.X / 2, Context.Camera.ViewportSize.Y)
+            else
+                OriginPosition = CurrentMousePosition
+            end
+
+            local TargetScreenPosition = Vector2.new(ScreenPosition.X, ScreenPosition.Y)
+
+            TracerLineOutline.From = OriginPosition
+            TracerLineOutline.To = TargetScreenPosition
+            TracerLineOutline.Visible = true
+
+            TracerLine.From = OriginPosition
+            TracerLine.To = TargetScreenPosition
+            TracerLine.Color = TracerColor
+            TracerLine.Visible = true
         end
     else
         TracerLineOutline.Visible = false
@@ -579,82 +650,113 @@ SafeConnect(RunService.RenderStepped, function()
     end
 end)
 
-t1.value11 = hookmetamethod(game, "__namecall", function(self, ...)
-    local method = getnamecallmethod()
-    local validCaller = not checkcaller()
-    local arguments = {...}
+-- Namecall Hook
+local OriginalNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+    local Method = getnamecallmethod()
+    local IsValidCaller = not checkcaller()
+    local Arguments = {...}
 
-    if validCaller and getgenv().imRunning and getgenv().SilentAim and t1.value8 then
-        local dataPacket = arguments[1]
-        if type(dataPacket) == "table" then
-            if method == "FireServer" then
-                if self.Name == "ThrowReplicate" then
-                    dataPacket.target = t1.value8.Position
-                    return t1.value11(self, unpack(arguments))
-                elseif self.Name == "ShootReplicate" then
-                    dataPacket.hitInstance = t1.value8
-                    dataPacket.hitPos = t1.value8.Position
-                    dataPacket.to = t1.value8.Position
-                    dataPacket.isCharacterHit = true
-                    
-                    if getgenv().Wallbang then
-                        dataPacket.origin = t1.value8.Position + Vector3.new(0, 1, 0)
-                    end
-                    
-                    if type(dataPacket.segments) == "table" and #dataPacket.segments > 0 then
-                        for _, seg in ipairs(dataPacket.segments) do
-                            seg.hitInstance = t1.value8
-                            seg.hitPos = t1.value8.Position
-                            seg.isCharacterHit = true
-                        end
-                    end
-                    return t1.value11(self, unpack(arguments))
-                end
-            elseif method == "Fire" then
-                if self.Name == "SpawnKnife" then
-                    dataPacket.target = t1.value8.Position
-                    return t1.value11(self, unpack(arguments))
-                elseif self.Name == "SpawnBullet" then
-                    dataPacket.hitInstance = t1.value8
-                    dataPacket.hitPos = t1.value8.Position
-                    dataPacket.to = t1.value8.Position
-                    dataPacket.isCharacterHit = true
-                    
-                    if getgenv().Wallbang then
-                        dataPacket.origin = t1.value8.Position + Vector3.new(0, 1, 0)
-                    end
-                    
-                    if type(dataPacket.segments) == "table" and #dataPacket.segments > 0 then
-                        for _, seg in ipairs(dataPacket.segments) do
-                            seg.hitInstance = t1.value8
-                            seg.hitPos = t1.value8.Position
-                            seg.isCharacterHit = true
-                        end
-                    end
-                    return t1.value11(self, unpack(arguments))
+    if not (IsValidCaller and DriftLoaded and SilentAim and Context.TargetNode) then
+        return OriginalNamecall(self, ...)
+    end
+
+    local DataPacket = Arguments[1]
+
+    if type(DataPacket) ~= "table" then
+        return OriginalNamecall(self, ...)
+    end
+
+    if Method == "FireServer" then
+        if self.Name == "ThrowReplicate" then
+            DataPacket.target = Context.TargetNode.Position
+            return OriginalNamecall(self, unpack(Arguments))
+        end
+
+        if self.Name == "ShootReplicate" then
+            DataPacket.hitInstance = Context.TargetNode
+            DataPacket.hitPos = Context.TargetNode.Position
+            DataPacket.to = Context.TargetNode.Position
+            DataPacket.isCharacterHit = true
+
+            if Wallbang then
+                DataPacket.origin = Context.TargetNode.Position + Vector3.new(0, 1, 0)
+            end
+
+            if type(DataPacket.segments) == "table" and #DataPacket.segments > 0 then
+                for _, Segment in DataPacket.segments do
+                    Segment.hitInstance = Context.TargetNode
+                    Segment.hitPos = Context.TargetNode.Position
+                    Segment.isCharacterHit = true
                 end
             end
+
+            return OriginalNamecall(self, unpack(Arguments))
         end
     end
-    return t1.value11(self, ...)
+
+    if Method == "Fire" then
+        if self.Name == "SpawnKnife" then
+            DataPacket.target = Context.TargetNode.Position
+            return OriginalNamecall(self, unpack(Arguments))
+        end
+
+        if self.Name == "SpawnBullet" then
+            DataPacket.hitInstance = Context.TargetNode
+            DataPacket.hitPos = Context.TargetNode.Position
+            DataPacket.to = Context.TargetNode.Position
+            DataPacket.isCharacterHit = true
+
+            if Wallbang then
+                DataPacket.origin = Context.TargetNode.Position + Vector3.new(0, 1, 0)
+            end
+
+            if type(DataPacket.segments) == "table" and #DataPacket.segments > 0 then
+                for _, Segment in DataPacket.segments do
+                    Segment.hitInstance = Context.TargetNode
+                    Segment.hitPos = Context.TargetNode.Position
+                    Segment.isCharacterHit = true
+                end
+            end
+
+            return OriginalNamecall(self, unpack(Arguments))
+        end
+    end
+
+    return OriginalNamecall(self, ...)
 end)
 
+-- Auto Shoot Loop
 task.spawn(function()
     if not game:IsLoaded() then
         game.Loaded:Wait()
     end
-    
+
     local GuiService = game:GetService("GuiService")
-    
-    while getgenv().imRunning and task.wait(0.05) do 
-        if getgenv().AutoShoot and getgenv().SilentAim and t1.value8 and not GuiService.MenuIsOpen then
-            if t1.value4.MouseBehavior == Enum.MouseBehavior.LockCenter then
-                mouse1click()
-            end
+
+    while DriftLoaded and task.wait(0.05) do
+        if not AutoShoot then
+            continue
+        end
+
+        if not SilentAim then
+            continue
+        end
+
+        if not Context.TargetNode then
+            continue
+        end
+
+        if GuiService.MenuIsOpen then
+            continue
+        end
+
+        if Context.UserInput.MouseBehavior == Enum.MouseBehavior.LockCenter then
+            mouse1click()
         end
     end
 end)
 
+-- UI Settings Group
 local MenuGroup = Tabs["UI Settings"]:AddGroupbox({
     Side = "Left",
     Name = "Menu",
@@ -664,8 +766,8 @@ local MenuGroup = Tabs["UI Settings"]:AddGroupbox({
 MenuGroup:AddToggle("KeybindMenuOpen", {
     Default = Library.KeybindFrame.Visible,
     Text = "Open Keybind Menu",
-    Callback = function(value)
-        Library.KeybindFrame.Visible = value
+    Callback = function(Value)
+        Library.KeybindFrame.Visible = Value
     end,
 })
 
@@ -704,6 +806,7 @@ MenuGroup:AddButton({
 
 Library.ToggleKeybind = Options.MenuKeybind
 
+-- Theme & Save Manager
 ThemeManager:SetLibrary(Library)
 SaveManager:SetLibrary(Library)
 SaveManager:IgnoreThemeSettings()
@@ -715,54 +818,65 @@ SaveManager:BuildConfigSection(Tabs["UI Settings"])
 ThemeManager:ApplyToTab(Tabs["UI Settings"])
 SaveManager:LoadAutoloadConfig()
 
+-- Unload Handler
 Library:OnUnload(function()
-    getgenv().imRunning = false
-    
-    for _, conn in ipairs(activeConnections) do
-        if conn.Disconnect then
-            conn:Disconnect()
+    Environment.DriftLoaded = false
+
+    for _, Connection in ActiveConnections do
+        if Connection.Disconnect then
+            Connection:Disconnect()
         end
     end
-    
-    for _, drawing in ipairs(activeDrawings) do
+
+    for _, DrawingObject in ActiveDrawings do
         pcall(function()
-            drawing:Remove()
+            DrawingObject:Remove()
         end)
     end
-    
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player.Character then
-            local highlight = player.Character:FindFirstChild("GetReal")
-            if highlight then
-                highlight:Destroy()
-            end
+
+    for _, Player in Players:GetPlayers() do
+        if not Player.Character then
+            continue
+        end
+
+        local Highlight = Player.Character:FindFirstChild("GetReal")
+        if Highlight then
+            Highlight:Destroy()
         end
     end
 end)
 
-local __ContribSrc = game:HttpGet("https://raw.githubusercontent.com/cryp1t/Drift/refs/heads/main/Contributors.luau")
-local __Team, __GameContribs = loadstring(__ContribSrc)()
+-- Credits Tab
+local ContributorsSource = game:HttpGet("https://raw.githubusercontent.com/cryp1t/Drift/refs/heads/main/Contributors.luau")
+local TeamMembers, GameContributors = loadstring(ContributorsSource)()
 
-local __DevBox = Tabs.Cont:AddLeftGroupbox("Team", "wrench")
-for __name, __role in pairs(__Team) do
-    __DevBox:AddLabel("[<font color=\"rgb(255, 255, 100)\">" .. __name .. "</font>] " .. __role)
+local TeamGroup = Tabs.Credits:AddLeftGroupbox("Team", "wrench")
+
+for Name, Role in TeamMembers do
+    TeamGroup:AddLabel("[<font color=\"rgb(255, 255, 100)\">" .. Name .. "</font>] " .. Role)
 end
 
-local __placeId = tostring(game.PlaceId)
-if __GameContribs[__placeId] then
-    local __ContBox = Tabs.Cont:AddRightGroupbox("Contributors", "users")
-    for __name, __contribution in pairs(__GameContribs[__placeId]) do
-        __ContBox:AddLabel("[<font color=\"rgb(255, 255, 100)\">" .. __name .. "</font>] " .. __contribution)
+local PlaceId = tostring(game.PlaceId)
+
+if GameContributors[PlaceId] then
+    local ContributorsGroup = Tabs.Credits:AddRightGroupbox("Contributors", "users")
+
+    for Name, Contribution in GameContributors[PlaceId] do
+        ContributorsGroup:AddLabel("[<font color=\"rgb(255, 255, 100)\">" .. Name .. "</font>] " .. Contribution)
     end
 end
 
-wait(1)
+-- Loaded Notification
+task.wait(1)
+
 Library:Notify({
 	Title = "Drift",
-	Description = "Loaded Succesfully!",
+	Description = "Loaded Successfully!",
 	Time = 5,
 })
+
 setclipboard("dsc.gg/getdrift")
+
 Library:Notify({
 	Title = "Drift",
 	Description = "Copied Discord Link",
