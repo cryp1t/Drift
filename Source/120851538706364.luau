@@ -651,7 +651,8 @@ SafeConnect(RunService.RenderStepped, function()
 end)
 
 -- Namecall Hook
-local OriginalNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+local OriginalNamecall
+OriginalNamecall = hookmetamethod(game, "__namecall", function(self, ...)
     local Method = getnamecallmethod()
     local IsValidCaller = not checkcaller()
     local Arguments = {...}
