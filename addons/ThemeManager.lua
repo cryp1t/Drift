@@ -508,6 +508,10 @@ function ThemeManager:LoadDefault()
     if not Success or FetchErrorMessage then
         if FetchErrorMessage ~= "Default theme is not set" then
             ThemeManager.Library:Notify(string.format("Failed to apply default theme: %s", FetchErrorMessage))
+        else
+            pcall(function()
+                ThemeManager.Library.Options.ThemeManager_ThemeList:SetValue("Default")
+            end)
         end
 
         return
@@ -782,6 +786,9 @@ function ThemeManager:CreateThemeManager(Themesbox: any)
         CustomThemeList:SetValue(nil)
 
         ThemeList:SetValues(BuiltInThemesNames)
+        if ThemeList.Value == nil or ThemeList.Value == "" then
+            ThemeList:SetValue("Default")
+        end
     end
 
     local function RefreshDefaultThemeLabel()
@@ -837,9 +844,10 @@ function ThemeManager:CreateThemeManager(Themesbox: any)
 
     Themesbox:AddDropdown("ThemeManager_ThemeList", { 
         Text = "Theme list", 
+        Default = "Default",
 
         Values = BuiltInThemesNames,
-        AllowNull = true,
+        AllowNull = false,
         Multi = false,
 
         FormatDisplayValue = function(Value: any)
@@ -1142,6 +1150,9 @@ function ThemeManager:CreateThemeManager(Themesbox: any)
 
     --// Load default
     ThemeManager:LoadDefault()
+    if ThemeList.Value == nil or ThemeList.Value == "" then
+        ThemeList:SetValue("Default")
+    end
     ThemeManager:UpdateContrastWarning()
     ThemeManager.AppliedToTab = true
     RefreshDefaultThemeLabel()
