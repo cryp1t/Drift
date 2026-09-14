@@ -1,5 +1,3 @@
-> [!IMPORTANT]
-> Skidding was done throughout the making of this Script Hub. Code might be messy!
 <div align="center">
 <img src="./addons/Logo.png" width="100" alt="Drift Logo">
 <h1>Drift</h1>
